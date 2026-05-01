@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Shadowing Player</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --bg: #0a0a0f; --surface: #14141f; --surface2: #1e1e2e;
+    --accent: #6ee7b7; --accent-dim: #2d4a3e;
+    --red: #f87171; --red-dim: #4a2d2d;
+    --orange: #fb923c; --orange-dim: #4a3a2d;
+    --purple: #a78bfa; --purple-dim: #3d2d5e;
+    --text: #e8e8ed; --text-dim: #6b6b7b; --text-muted: #3a3a4a;
+    --radius: 16px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+
+  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; gap: 20px; }
+  .setup-screen h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
+  .setup-screen p { color: var(--text-dim); font-size: 14px; text-align: center; max-width: 320px; line-height: 1.5; }
+  .file-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 320px; padding: 24px; border: 2px dashed var(--text-muted); border-radius: var(--radius); background: var(--surface); cursor: pointer; transition: all 0.2s; gap: 8px; }
+  .file-btn:hover, .file-btn:active { border-color: var(--accent); background: var(--surface2); }
+  .file-btn.loaded { border-color: var(--accent); border-style: solid; }
+  .file-btn .icon { font-size: 32px; } .file-btn .label { font-size: 15px; font-weight: 500; }
+  .file-btn .status { font-size: 12px; color: var(--text-dim); } .file-btn.loaded .status { color: var(--accent); }
+  .start-btn { width: 100%; max-width: 320px; padding: 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; opacity: 0.3; pointer-events: none; }
+  .start-btn.ready { opacity: 1; pointer-events: auto; } .start-btn:active { transform: scale(0.97); }
+
+  /* Stats preview on setup screen */
+  .stats-preview { width: 100%; max-width: 320px; background: var(--surface); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all 0.2s; }
+  .stats-preview:hover { background: var(--surface2); }
+  .stats-preview-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
+  .stats-preview-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+  .stats-preview-label { font-size: 13px; color: var(--text-dim); }
+  .stats-preview-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); font-weight: 500; }
+  .stats-preview-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: 6px; }
+  .delta-up { color: var(--accent); }
+  .delta-down { color: var(--orange); }
+  .delta-same { color: var(--text-muted); }
+
+  /* History panel */
+  .history-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 100; flex-direction: column; padding: 20px 16px; overflow-y: auto; }
+  .history-panel.open { display: flex; }
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .history-header h2 { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .history-close { padding: 8px 16px; border: 1px solid var(--text-muted); border-radius: 20px; background: transparent; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
+  .history-day { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
+  .history-date { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 8px; }
+  .history-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .history-stat { display: flex; flex-direction: column; gap: 2px; }
+  .history-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--text); font-weight: 500; }
+  .history-stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  .history-empty { color: var(--text-muted); font-size: 14px; text-align: center; padding: 40px; }
+
+  .player-screen { display: none; flex-direction: column; height: 100dvh; }
+  .player-screen.active { display: flex; }
+
+  /* Session bar */
+  .session-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; background: var(--surface); flex-shrink: 0; cursor: pointer; }
+  .session-bar:active { background: var(--surface2); }
+  .session-timer { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); font-weight: 500; }
+  .session-stats { display: flex; gap: 12px; }
+  .session-stat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .session-stat span { color: var(--text); font-weight: 500; }
+
+  .video-wrap { position: relative; width: 100%; flex-shrink: 0; background: #000; }
+  .video-wrap video { width: 100%; display: block; max-height: 28dvh; object-fit: contain; background: #000; }
+  .pause-badge { position: absolute; top: 12px; right: 12px; background: rgba(0,0,0,0.7); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 8px; opacity: 0; transition: opacity 0.2s; }
+  .pause-badge.visible { opacity: 1; }
+  .pause-badge.recording { color: var(--red); }
+  .pause-badge.shadow { color: var(--purple); }
+  .pause-badge.countdown { color: var(--orange); font-size: 18px; font-weight: 700; }
+
+  .toolbar { display: flex; gap: 6px; padding: 8px 16px; flex-shrink: 0; flex-wrap: wrap; align-items: center; }
+  .tool-btn { padding: 6px 12px; border: 1px solid var(--text-muted); border-radius: 20px; background: transparent; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .tool-btn:active { transform: scale(0.95); }
+  .tool-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .tool-btn.rec-active { border-color: var(--red); color: var(--red); background: var(--red-dim); animation: pulse-rec 1.5s infinite; }
+  .tool-btn.shadow-active { border-color: var(--purple); color: var(--purple); background: var(--purple-dim); animation: pulse-rec 1.5s infinite; }
+  .tool-btn.preparing { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+  .tool-btn.has-rec { border-color: var(--orange); color: var(--orange); background: var(--orange-dim); }
+  @keyframes pulse-rec { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .rec-timer { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--red); margin-left: 2px; }
+  .rec-timer.shadow-timer { color: var(--purple); }
+
+  .takes-area { padding: 6px 16px 6px; flex-shrink: 0; background: var(--surface); border-radius: 12px; margin: 4px 16px; }
+  .takes-area:empty { display: none; }
+  .takes-orig { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--accent); padding: 6px 0 4px; font-weight: 500; }
+  .take-row { display: flex; align-items: center; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--surface2); }
+  .take-row:last-child { border-bottom: none; }
+  .take-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text); min-width: 110px; font-weight: 500; }
+  .take-num .take-type { font-size: 10px; font-weight: 400; }
+  .take-num .take-type.rec-type { color: var(--orange); }
+  .take-num .take-type.shadow-type { color: var(--purple); }
+  .take-time { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); min-width: 44px; font-weight: 500; }
+  .take-bar { flex: 1; height: 6px; background: var(--surface2); border-radius: 3px; position: relative; overflow: hidden; }
+  .take-bar-fill { height: 100%; border-radius: 3px; transition: width 0.1s; }
+  .take-bar-fill.rec-fill { background: var(--accent); }
+  .take-bar-fill.shadow-fill { background: var(--purple); }
+  .take-btn { padding: 5px 14px; border: 1px solid var(--text-dim); border-radius: 12px; background: transparent; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; font-weight: 500; }
+  .take-btn:active { background: var(--surface2); }
+  .take-btn.playing { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+  .take-mix-btn { padding: 5px 10px; border: 1px solid var(--purple); border-radius: 12px; background: transparent; color: var(--purple); font-family: 'JetBrains Mono', monospace; font-size: 10px; cursor: pointer; font-weight: 500; }
+  .take-mix-btn:active { background: var(--purple-dim); }
+  .take-mix-btn.playing { background: var(--purple-dim); }
+
+  .progress-bar { height: 3px; background: var(--surface2); flex-shrink: 0; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+
+  .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; }
+  .phrase-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; flex: 1; display: flex; align-items: center; transition: opacity 0.2s; }
+  .phrase-text.dimmed { opacity: 0.15; }
+  .phrase-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
+  .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
+  .ctrl-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .ctrl-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-right: none; }
+  .ctrl-btn:active { background: var(--surface2); transform: scale(0.95); }
+  .ctrl-btn .ctrl-icon { font-size: 20px; }
+  .ctrl-btn.accent-btn { background: var(--accent-dim); color: var(--accent); }
+
+  @media (min-width: 768px) { .player-screen { max-width: 480px; margin: 0 auto; } .phrase-text { font-size: 26px; } }
+  input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="setup-screen" id="setup">
+  <h1>Shadowing Player</h1>
+  <p>Load a video file and a transcript JSON to start practicing.</p>
+  <div class="file-btn" id="videoPicker" onclick="document.getElementById('videoInput').click()">
+    <span class="icon">🎬</span><span class="label">Video file</span><span class="status" id="videoStatus">tap to select .mp4</span>
+  </div>
+  <input type="file" id="videoInput" accept="video/*">
+  <div class="file-btn" id="jsonPicker" onclick="document.getElementById('jsonInput').click()">
+    <span class="icon">📝</span><span class="label">Transcript JSON</span><span class="status" id="jsonStatus">tap to select .json</span>
+  </div>
+  <input type="file" id="jsonInput" accept=".json">
+  <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
+  <div class="stats-preview" id="statsPreview" onclick="openHistory()"></div>
+</div>
+
+<!-- History panel -->
+<div class="history-panel" id="historyPanel">
+  <div class="history-header">
+    <h2>Practice History</h2>
+    <button class="history-close" onclick="closeHistory()">Close</button>
+  </div>
+  <div id="historyList"></div>
+</div>
+
+<div class="player-screen" id="player">
+  <div class="session-bar" onclick="openHistory()">
+    <span class="session-timer" id="sessionTimer">00:00</span>
+    <div class="session-stats">
+      <span class="session-stat">Phrases: <span id="sessionPhrases">0</span></span>
+      <span class="session-stat">Recs: <span id="sessionRecs">0</span></span>
+    </div>
+  </div>
+  <div class="video-wrap">
+    <video id="video" playsinline></video>
+    <div class="pause-badge" id="pauseBadge">YOUR TURN</div>
+  </div>
+  <div class="toolbar">
+    <button class="tool-btn active" id="speedBtn" onclick="cycleSpeed()">1x</button>
+    <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
+    <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
+    <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
+    <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
+    <span class="rec-timer" id="recTimer" style="display:none"></span>
+  </div>
+  <div class="takes-area" id="takesArea"></div>
+  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="phrase-area">
+    <div class="phrase-counter" id="phraseCounter">1 / 189</div>
+    <div class="phrase-text" id="phraseText">Loading...</div>
+    <div class="phrase-time" id="phraseTime">00:00</div>
+  </div>
+  <div class="controls">
+    <button class="ctrl-btn" onclick="prevPhrase()"><span class="ctrl-icon">⏮</span>Prev</button>
+    <button class="ctrl-btn" onclick="replayPhrase()"><span class="ctrl-icon">🔄</span>Replay</button>
+    <button class="ctrl-btn" onclick="togglePause()"><span class="ctrl-icon" id="pauseIcon">⏸</span><span id="pauseLabel">Pause</span></button>
+    <button class="ctrl-btn" onclick="toggleText()"><span class="ctrl-icon">👁</span><span id="toggleLabel">Hide</span></button>
+    <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
+  </div>
+</div>
+
+<script>
+// ===== STATS & STORAGE =====
+const STORAGE_KEY = 'shadowing_stats';
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+}
+
+function saveStats(stats) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+}
+
+function getTodayStats() {
+  const stats = loadStats();
+  return stats[todayKey()] || { minutes: 0, phrases: 0, recs: 0 };
+}
+
+function updateTodayStats(updates) {
+  const stats = loadStats();
+  const key = todayKey();
+  if (!stats[key]) stats[key] = { minutes: 0, phrases: 0, recs: 0 };
+  Object.assign(stats[key], updates);
+  saveStats(stats);
+}
+
+function renderStatsPreview() {
+  const el = document.getElementById('statsPreview');
+  const stats = loadStats();
+  const days = Object.keys(stats).sort().reverse();
+
+  if (days.length === 0) {
+    el.innerHTML = '<div class="stats-preview-title">No practice history yet</div>';
+    return;
+  }
+
+  const today = days[0];
+  const todayData = stats[today];
+  const yesterday = days.length > 1 ? stats[days[1]] : null;
+
+  function delta(curr, prev, unit) {
+    if (!prev) return '';
+    const d = curr - prev;
+    if (d === 0) return `<span class="stats-preview-delta delta-same">=</span>`;
+    const cls = d > 0 ? 'delta-up' : 'delta-down';
+    const arrow = d > 0 ? '↑' : '↓';
+    return `<span class="stats-preview-delta ${cls}">${arrow}${Math.abs(d)}${unit}</span>`;
+  }
+
+  el.innerHTML = `
+    <div class="stats-preview-title">LAST SESSION — ${today}</div>
+    <div class="stats-preview-row">
+      <span class="stats-preview-label">Time</span>
+      <span class="stats-preview-value">${todayData.minutes} min ${delta(todayData.minutes, yesterday?.minutes, 'min')}</span>
+    </div>
+    <div class="stats-preview-row">
+      <span class="stats-preview-label">Phrases</span>
+      <span class="stats-preview-value">${todayData.phrases} ${delta(todayData.phrases, yesterday?.phrases, '')}</span>
+    </div>
+    <div class="stats-preview-row">
+      <span class="stats-preview-label">Recordings</span>
+      <span class="stats-preview-value">${todayData.recs} ${delta(todayData.recs, yesterday?.recs, '')}</span>
+    </div>
+    <div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">Tap for full history</div>
+  `;
+}
+
+function openHistory() {
+  const panel = document.getElementById('historyPanel');
+  const list = document.getElementById('historyList');
+  const stats = loadStats();
+  const days = Object.keys(stats).sort().reverse();
+
+  if (days.length === 0) {
+    list.innerHTML = '<div class="history-empty">No practice sessions recorded yet.</div>';
+  } else {
+    list.innerHTML = days.map((day, i) => {
+      const d = stats[day];
+      const prev = i < days.length - 1 ? stats[days[i + 1]] : null;
+
+      function arrow(curr, prevVal) {
+        if (!prev || prevVal === undefined) return '';
+        const diff = curr - prevVal;
+        if (diff === 0) return ' <span class="delta-same">=</span>';
+        return diff > 0 ? ` <span class="delta-up">↑${diff}</span>` : ` <span class="delta-down">↓${Math.abs(diff)}</span>`;
+      }
+
+      return `<div class="history-day">
+        <div class="history-date">${day}</div>
+        <div class="history-stats">
+          <div class="history-stat"><div class="history-stat-val">${d.minutes} min${arrow(d.minutes, prev?.minutes)}</div><div class="history-stat-lbl">TIME</div></div>
+          <div class="history-stat"><div class="history-stat-val">${d.phrases}${arrow(d.phrases, prev?.phrases)}</div><div class="history-stat-lbl">PHRASES</div></div>
+          <div class="history-stat"><div class="history-stat-val">${d.recs}${arrow(d.recs, prev?.recs)}</div><div class="history-stat-lbl">RECS</div></div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  panel.classList.add('open');
+}
+
+function closeHistory() { document.getElementById('historyPanel').classList.remove('open'); }
+
+// ===== SESSION TRACKING =====
+let sessionStartTime = null;
+let sessionTimerInterval = null;
+let sessionPhrasesVisited = new Set();
+let sessionRecCount = 0;
+let sessionPaused = false;
+let sessionElapsed = 0; // ms accumulated before pause
+
+function startSessionTimer() {
+  sessionStartTime = Date.now();
+  sessionElapsed = 0;
+  sessionPhrasesVisited = new Set();
+  sessionRecCount = 0;
+  updateSessionUI();
+
+  sessionTimerInterval = setInterval(() => {
+    if (!sessionPaused) updateSessionUI();
+  }, 1000);
+}
+
+function getSessionSeconds() {
+  const running = sessionPaused ? 0 : (Date.now() - sessionStartTime);
+  return Math.floor((sessionElapsed + running) / 1000);
+}
+
+function updateSessionUI() {
+  const sec = getSessionSeconds();
+  const m = Math.floor(sec / 60), s = sec % 60;
+  document.getElementById('sessionTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  document.getElementById('sessionPhrases').textContent = sessionPhrasesVisited.size;
+  document.getElementById('sessionRecs').textContent = sessionRecCount;
+
+  // Save to localStorage every 10 seconds
+  if (sec % 10 === 0) {
+    updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  }
+}
+
+function trackPhrase(idx) { sessionPhrasesVisited.add(idx); }
+function trackRec() { sessionRecCount++; }
+
+// ===== MAIN PLAYER =====
+let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
+let autoPauseEnabled = true, isPausedByUser = false;
+
+const speeds = [0.75, 1];
+let speedIndex = 1;
+let loopEnabled = false, loopCount = 0;
+const LOOP_MAX = 3;
+const MAX_TAKES = 5;
+
+let mediaRecorder = null, recordedChunks = [], micStream = null;
+let isRecording = false, recPreparing = false, shadowMode = false;
+let recStartTime = 0, recTimerInterval = null;
+
+let takes = [];
+let playingTakeIdx = -1;
+let takeProgressInterval = null;
+let mixPlaying = false;
+
+// Init
+renderStatsPreview();
+
+document.getElementById('videoInput').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  videoFile = f;
+  document.getElementById('videoStatus').textContent = f.name;
+  document.getElementById('videoPicker').classList.add('loaded');
+  checkReady();
+});
+document.getElementById('jsonInput').addEventListener('change', (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = (ev) => {
+    try {
+      sentences = parseTranscript(JSON.parse(ev.target.result));
+      document.getElementById('jsonStatus').textContent = `${sentences.length} phrases`;
+      document.getElementById('jsonPicker').classList.add('loaded');
+      checkReady();
+    } catch(err) { document.getElementById('jsonStatus').textContent = 'Error'; }
+  };
+  r.readAsText(f);
+});
+
+function parseTranscript(data) {
+  const res = [];
+  for (const seg of data.segments) {
+    let words = [], start = null;
+    for (const w of seg.words) {
+      if (w.type !== 'word') continue;
+      if (start === null) start = w.start;
+      words.push(w.text);
+      if (w.eos) { res.push({ start, end: w.start + w.duration, text: words.join(' ') }); words = []; start = null; }
+    }
+    if (words.length) { const lw = seg.words[seg.words.length-1]; res.push({ start, end: lw.start + lw.duration, text: words.join(' ') }); }
+  }
+  return res;
+}
+
+function checkReady() { if (videoFile && sentences.length) document.getElementById('startBtn').classList.add('ready'); }
+
+function startPlayer() {
+  if (!videoFile || !sentences.length) return;
+  document.getElementById('setup').style.display = 'none';
+  document.getElementById('player').classList.add('active');
+  video = document.getElementById('video');
+  video.src = URL.createObjectURL(videoFile);
+  video.load();
+
+  startSessionTimer();
+
+  function tick() {
+    if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
+      const s = sentences[currentIndex];
+      if (video.currentTime >= s.end - 0.12) {
+        video.pause();
+        if (isRecording && shadowMode) { stopRecording(); }
+        else if (loopEnabled && loopCount < LOOP_MAX - 1) { loopCount++; setTimeout(() => playPhrase(currentIndex), 600); }
+        else { loopCount = 0; }
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  video.addEventListener('pause', () => { if (!recPreparing && !isRecording) setBadge('YOUR TURN', 'visible'); });
+  video.addEventListener('play', () => {
+    if (!isRecording && !mixPlaying) {
+      hideBadge(); isPausedByUser = false;
+      document.getElementById('pauseIcon').textContent = '⏸';
+      document.getElementById('pauseLabel').textContent = 'Pause';
+    }
+  });
+
+  currentIndex = 0;
+  showPhrase(currentIndex);
+  playPhrase(currentIndex);
+}
+
+function setBadge(t, c) { const b = document.getElementById('pauseBadge'); b.textContent = t; b.className = 'pause-badge ' + c; }
+function hideBadge() { document.getElementById('pauseBadge').className = 'pause-badge'; }
+
+function showPhrase(idx) {
+  const s = sentences[idx];
+  document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
+  document.getElementById('phraseText').textContent = s.text;
+  document.getElementById('phraseText').classList.toggle('dimmed', !textVisible);
+  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
+  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
+  document.getElementById('progressFill').style.width = ((idx+1)/sentences.length*100)+'%';
+  clearAllTakes();
+  trackPhrase(idx);
+}
+
+function playPhrase(idx) {
+  stopAllTakePlayback();
+  const s = sentences[idx];
+  video.currentTime = s.start;
+  video.playbackRate = speeds[speedIndex];
+  video.volume = 1;
+  video.play();
+}
+
+function nextPhrase() { if (currentIndex < sentences.length-1) { currentIndex++; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
+function prevPhrase() { if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
+function replayPhrase() { loopCount=0; playPhrase(currentIndex); }
+
+function togglePause() {
+  if (!video) return;
+  if (!video.paused) { video.pause(); isPausedByUser = true; document.getElementById('pauseIcon').textContent = '▶'; document.getElementById('pauseLabel').textContent = 'Play'; }
+  else if (isPausedByUser) { video.play(); }
+  else { replayPhrase(); }
+}
+
+function toggleText() {
+  textVisible = !textVisible;
+  document.getElementById('phraseText').classList.toggle('dimmed', !textVisible);
+  document.getElementById('toggleLabel').textContent = textVisible ? 'Hide' : 'Show';
+}
+
+function cycleSpeed() {
+  speedIndex = (speedIndex+1) % speeds.length;
+  document.getElementById('speedBtn').textContent = speeds[speedIndex]+'x';
+  if (video) video.playbackRate = speeds[speedIndex];
+}
+
+function toggleLoop() {
+  loopEnabled = !loopEnabled; loopCount = 0;
+  const btn = document.getElementById('loopBtn');
+  btn.textContent = loopEnabled ? `Loop: ${LOOP_MAX}x` : 'Loop: off';
+  btn.classList.toggle('active', loopEnabled);
+}
+
+// --- REC ---
+function handleRec() {
+  if (isRecording) { stopRecording(); return; }
+  if (recPreparing) return;
+  if (takes.length >= MAX_TAKES) { clearAllTakes(); }
+  shadowMode = false;
+  startRecFlow();
+}
+
+function handleShadow() {
+  if (isRecording) { stopRecording(); return; }
+  if (recPreparing) return;
+  if (takes.length >= MAX_TAKES) { clearAllTakes(); }
+  shadowMode = true;
+  startShadowFlow();
+}
+
+async function startRecFlow() {
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(err) { alert('Microphone access denied'); return; }
+  recPreparing = true;
+  document.getElementById('recBtn').classList.add('preparing');
+  document.getElementById('recBtn').textContent = 'Listen...';
+  stopAllTakePlayback();
+  const s = sentences[currentIndex];
+  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  setBadge('LISTEN', 'visible');
+  function waitEnd() {
+    if (video.currentTime >= s.end - 0.12) { video.pause(); doCountdown(2, false); return; }
+    requestAnimationFrame(waitEnd);
+  }
+  requestAnimationFrame(waitEnd);
+}
+
+async function startShadowFlow() {
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+  catch(err) { alert('Microphone access denied'); return; }
+  recPreparing = true;
+  document.getElementById('shadowBtn').classList.add('preparing');
+  document.getElementById('shadowBtn').textContent = 'Ready...';
+  stopAllTakePlayback();
+  doCountdown(2, true);
+}
+
+function doCountdown(n, isShadow) {
+  if (n <= 0) { if (isShadow) beginShadowRecording(); else beginRecording(); return; }
+  setBadge(n + '...', 'visible countdown');
+  if (isShadow) document.getElementById('shadowBtn').textContent = n + '...';
+  else document.getElementById('recBtn').textContent = n + '...';
+  setTimeout(() => doCountdown(n - 1, isShadow), 1000);
+}
+
+function beginRecording() {
+  recPreparing = false; isRecording = true; shadowMode = false; recordedChunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => finishRecording('rec');
+  mediaRecorder.start();
+  recStartTime = Date.now();
+  document.getElementById('recBtn').textContent = '● REC';
+  document.getElementById('recBtn').classList.remove('preparing');
+  document.getElementById('recBtn').classList.add('rec-active');
+  document.getElementById('stopBtn').style.display = '';
+  const timer = document.getElementById('recTimer');
+  timer.style.display = ''; timer.className = 'rec-timer';
+  setBadge('● REC', 'visible recording');
+  recTimerInterval = setInterval(() => { timer.textContent = ((Date.now() - recStartTime) / 1000).toFixed(1) + 's'; }, 100);
+}
+
+function beginShadowRecording() {
+  recPreparing = false; isRecording = true; shadowMode = true; recordedChunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+  mediaRecorder.onstop = () => finishRecording('shadow');
+  mediaRecorder.start();
+  recStartTime = Date.now();
+  const s = sentences[currentIndex];
+  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  document.getElementById('shadowBtn').textContent = '● SHADOW';
+  document.getElementById('shadowBtn').classList.remove('preparing');
+  document.getElementById('shadowBtn').classList.add('shadow-active');
+  document.getElementById('stopBtn').style.display = '';
+  const timer = document.getElementById('recTimer');
+  timer.style.display = ''; timer.className = 'rec-timer shadow-timer';
+  setBadge('● SHADOW', 'visible shadow');
+  recTimerInterval = setInterval(() => { timer.textContent = ((Date.now() - recStartTime) / 1000).toFixed(1) + 's'; }, 100);
+}
+
+function finishRecording(type) {
+  const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+  const audio = new Audio(URL.createObjectURL(blob));
+  const dur = (Date.now() - recStartTime) / 1000;
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  isRecording = false; clearInterval(recTimerInterval);
+  takes.push({ audio, duration: dur, type });
+  trackRec();
+  renderTakes();
+  const recBtn = document.getElementById('recBtn');
+  const shadowBtn = document.getElementById('shadowBtn');
+  if (takes.length >= MAX_TAKES) {
+    recBtn.textContent = 'Reset'; recBtn.className = 'tool-btn has-rec';
+    shadowBtn.textContent = 'Reset'; shadowBtn.className = 'tool-btn has-rec';
+  } else {
+    recBtn.textContent = 'Rec'; recBtn.className = 'tool-btn';
+    shadowBtn.textContent = 'Shadow'; shadowBtn.className = 'tool-btn';
+  }
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('recTimer').style.display = 'none';
+  setBadge('SAVED', 'visible');
+  setTimeout(() => playTake(takes.length - 1), 200);
+}
+
+function stopRecording() { if (isRecording && mediaRecorder) mediaRecorder.stop(); }
+
+// --- TAKES ---
+function renderTakes() {
+  const area = document.getElementById('takesArea');
+  const origDur = (sentences[currentIndex].end - sentences[currentIndex].start).toFixed(1);
+  area.innerHTML = '';
+  if (takes.length > 0) {
+    const info = document.createElement('div');
+    info.className = 'takes-orig';
+    info.textContent = `Original: ${origDur}s`;
+    area.appendChild(info);
+  }
+  takes.forEach((take, i) => {
+    const row = document.createElement('div');
+    row.className = 'take-row'; row.id = 'take-row-' + i;
+    const diff = (take.duration - parseFloat(origDur)).toFixed(1);
+    const diffStr = diff > 0 ? `+${diff}` : diff;
+    const diffColor = Math.abs(diff) < 0.5 ? 'var(--accent)' : (diff > 0 ? 'var(--orange)' : 'var(--text-dim)');
+    const typeClass = take.type === 'shadow' ? 'shadow-type' : 'rec-type';
+    const typeLabel = take.type === 'shadow' ? 'Shadow' : 'Rec';
+    const barClass = take.type === 'shadow' ? 'shadow-fill' : 'rec-fill';
+    let mixBtn = take.type === 'shadow' ? `<button class="take-mix-btn" id="take-mix-${i}" onclick="toggleMix(${i})">Mix</button>` : '';
+    row.innerHTML = `
+      <span class="take-num">${i+1} <span class="take-type ${typeClass}">${typeLabel}</span></span>
+      <span class="take-time">${take.duration.toFixed(1)}s</span>
+      <div class="take-bar"><div class="take-bar-fill ${barClass}" id="take-bar-${i}" style="width:0%"></div></div>
+      <span class="take-time" style="color:${diffColor}">${diffStr}s</span>
+      ${mixBtn}
+      <button class="take-btn" id="take-btn-${i}" onclick="toggleTake(${i})">▶</button>
+    `;
+    area.appendChild(row);
+  });
+}
+
+function toggleTake(idx) { if (playingTakeIdx === idx && !mixPlaying) stopAllTakePlayback(); else playTake(idx); }
+
+function playTake(idx) {
+  stopAllTakePlayback();
+  const take = takes[idx]; if (!take) return;
+  playingTakeIdx = idx;
+  take.audio.currentTime = 0; take.audio.play();
+  const btn = document.getElementById('take-btn-' + idx);
+  if (btn) { btn.textContent = '■'; btn.classList.add('playing'); }
+  takeProgressInterval = setInterval(() => {
+    const bar = document.getElementById('take-bar-' + idx);
+    if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%';
+  }, 50);
+  take.audio.onended = () => stopAllTakePlayback();
+}
+
+function toggleMix(idx) {
+  if (mixPlaying && playingTakeIdx === idx) { stopAllTakePlayback(); return; }
+  stopAllTakePlayback();
+  const take = takes[idx]; if (!take || take.type !== 'shadow') return;
+  mixPlaying = true; playingTakeIdx = idx;
+  const s = sentences[currentIndex];
+  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 0.5; video.play();
+  take.audio.currentTime = 0; take.audio.play();
+  const mixBtn = document.getElementById('take-mix-' + idx);
+  if (mixBtn) { mixBtn.textContent = '■ Mix'; mixBtn.classList.add('playing'); }
+  takeProgressInterval = setInterval(() => {
+    const bar = document.getElementById('take-bar-' + idx);
+    if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%';
+  }, 50);
+  take.audio.onended = () => { video.pause(); video.volume = 1; stopAllTakePlayback(); };
+}
+
+function stopAllTakePlayback() {
+  clearInterval(takeProgressInterval); mixPlaying = false;
+  if (video) video.volume = 1;
+  takes.forEach((t, i) => {
+    t.audio.pause(); t.audio.currentTime = 0;
+    const btn = document.getElementById('take-btn-' + i); if (btn) { btn.textContent = '▶'; btn.classList.remove('playing'); }
+    const bar = document.getElementById('take-bar-' + i); if (bar) bar.style.width = '0%';
+    const mix = document.getElementById('take-mix-' + i); if (mix) { mix.textContent = 'Mix'; mix.classList.remove('playing'); }
+  });
+  playingTakeIdx = -1;
+}
+
+function clearAllTakes() {
+  stopAllTakePlayback();
+  takes.forEach(t => t.audio.pause()); takes = [];
+  document.getElementById('takesArea').innerHTML = '';
+  if (isRecording && mediaRecorder) mediaRecorder.stop();
+  if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+  isRecording = false; recPreparing = false; shadowMode = false;
+  clearInterval(recTimerInterval);
+  document.getElementById('recBtn').textContent = 'Rec'; document.getElementById('recBtn').className = 'tool-btn';
+  document.getElementById('shadowBtn').textContent = 'Shadow'; document.getElementById('shadowBtn').className = 'tool-btn';
+  document.getElementById('stopBtn').style.display = 'none';
+  document.getElementById('recTimer').style.display = 'none';
+}
+
+// Save on close
+window.addEventListener('beforeunload', () => {
+  const sec = getSessionSeconds();
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+});
+
+// Tab switch
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && video && !video.paused) video.pause();
+});
+
+// Keyboard
+document.addEventListener('keydown', (e) => {
+  if (document.getElementById('historyPanel').classList.contains('open')) {
+    if (e.key === 'Escape') closeHistory();
+    return;
+  }
+  if (!document.getElementById('player').classList.contains('active')) return;
+  switch(e.key) {
+    case 'ArrowRight': nextPhrase(); break;
+    case 'ArrowLeft': prevPhrase(); break;
+    case 'ArrowUp': case 'ArrowDown': e.preventDefault(); replayPhrase(); break;
+    case ' ': e.preventDefault(); togglePause(); break;
+    case 'h': toggleText(); break;
+    case 's': cycleSpeed(); break;
+    case 'l': toggleLoop(); break;
+    case 'r': handleRec(); break;
+    case 'w': handleShadow(); break;
+  }
+});
+</script>
+</body>
+</html>
