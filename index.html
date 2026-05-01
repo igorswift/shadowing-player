@@ -113,20 +113,14 @@
   .progress-bar { height: 3px; background: var(--surface2); flex-shrink: 0; }
   .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
 
-  .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; justify-content: center; }
+  .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; }
   .phrase-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; transition: opacity 0.2s; word-wrap: break-word; overflow-wrap: break-word; }
+  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; flex: 1; display: flex; align-items: center; transition: opacity 0.2s; flex-wrap: wrap; align-content: center; gap: 0; }
   .phrase-text.dimmed { opacity: 0.15; }
   .phrase-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
-  /* Karaoke words */
-  .word { cursor: pointer; transition: color 0.15s; padding: 0 1px; position: relative; }
-  .word:hover { color: var(--accent); }
-  .word-active {
-    background: linear-gradient(90deg, #fbbf24 var(--word-progress, 0%), var(--text) var(--word-progress, 0%));
-    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  }
-  .word-done { color: var(--text); opacity: 0.45; }
+  .word { cursor: pointer; transition: color 0.15s; }
+  .word:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
   .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
@@ -139,13 +133,11 @@
   @media (min-width: 768px) { .player-screen { max-width: 480px; margin: 0 auto; } .phrase-text { font-size: 26px; } }
   input[type="file"] { display: none; }
 
-  /* Countdown timer */
   .countdown-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; flex-shrink: 0; }
   .countdown-presets { display: flex; gap: 4px; }
   .cd-btn { padding: 5px 10px; border: 1px solid var(--text-muted); border-radius: 14px; background: transparent; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; }
   .cd-btn:active { transform: scale(0.95); }
-  .cd-btn.cd-active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-  .cd-btn.cd-running { border-color: var(--red); color: var(--red); background: var(--red-dim); }
+  .cd-btn.cd-running { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
   .cd-display { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); font-weight: 500; min-width: 50px; }
   .cd-display.cd-warn { color: var(--orange); }
   .cd-display.cd-done { color: var(--red); animation: pulse-rec 1s infinite; }
@@ -210,7 +202,7 @@
       <button class="cd-btn" onclick="toggleCountdown(20)">20m</button>
     </div>
     <span class="cd-display" id="cdDisplay"></span>
-    <div class="cd-progress"><div class="cd-progress-fill" id="cdFill" style="width:100%"></div></div>
+    <div class="cd-progress"><div class="cd-progress-fill" id="cdFill" style="width:0%"></div></div>
   </div>
   <div class="takes-area" id="takesArea"></div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
@@ -240,10 +232,10 @@ function formatDate(key) {
 }
 function loadStats() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
 function saveStats(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
-function getTodayStats() { const s = loadStats(); return s[todayKey()] || { minutes: 0, phrases: 0, recs: 0 }; }
+function getTodayStats() { const s = loadStats(); return s[todayKey()] || { minutes: 0, seconds: 0, phrases: 0, recs: 0 }; }
 function updateTodayStats(u) {
   const s = loadStats(), k = todayKey();
-  if (!s[k]) s[k] = { minutes: 0, phrases: 0, recs: 0 };
+  if (!s[k]) s[k] = { minutes: 0, seconds: 0, phrases: 0, recs: 0 };
   Object.assign(s[k], u);
   saveStats(s);
 }
@@ -256,7 +248,7 @@ function openHistory() {
 
   // Update today's stats before showing
   const sec = getSessionSeconds();
-  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 
   if (days.length === 0) {
     list.innerHTML = '<div class="history-empty">No practice sessions yet.</div>';
@@ -322,12 +314,11 @@ function startSessionTimer() {
   sessionPhrasesVisited = new Set();
   sessionRecCount = 0;
 
-  // Show today's date
   document.getElementById('sessionDate').textContent = formatDate(todayKey());
 
-  // Load existing today stats to continue accumulating
+  // Load existing today stats — use seconds if available, fall back to minutes
   const existing = getTodayStats();
-  sessionElapsed = existing.minutes * 60 * 1000;
+  sessionElapsed = (existing.seconds || (existing.minutes * 60)) * 1000;
   sessionStartTime = Date.now();
 
   updateSessionUI();
@@ -342,7 +333,7 @@ function updateSessionUI() {
   document.getElementById('sessionTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   document.getElementById('sessionPhrases').textContent = sessionPhrasesVisited.size;
   document.getElementById('sessionRecs').textContent = sessionRecCount;
-  if (sec % 10 === 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec % 10 === 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 }
 
 function trackPhrase(idx) { sessionPhrasesVisited.add(idx); }
@@ -410,7 +401,6 @@ function startPlayer() {
   startSessionTimer();
 
   function tick() {
-    updateKaraoke();
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
       const s = sentences[currentIndex];
       if (video.currentTime >= s.end - 0.12) {
@@ -442,8 +432,8 @@ function showPhrase(idx) {
   const phraseEl = document.getElementById('phraseText');
   if (s.words && s.words.length) {
     phraseEl.innerHTML = s.words.map((w, i) =>
-      `<span class="word" data-widx="${i}" onclick="seekToWord(${i})">${w.text}</span>`
-    ).join(' ');
+      `<span class="word" onclick="seekToWord(${i})">${w.text} </span>`
+    ).join('');
   } else {
     phraseEl.textContent = s.text;
   }
@@ -469,32 +459,6 @@ function seekToWord(wordIdx) {
   stopAllTakePlayback();
   video.currentTime = s.words[wordIdx].start;
   video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-}
-
-function updateKaraoke() {
-  if (!video || video.paused) return;
-  const s = sentences[currentIndex];
-  if (!s.words) return;
-  const ct = video.currentTime;
-  const wordEls = document.querySelectorAll('#phraseText .word');
-  wordEls.forEach((el, i) => {
-    const w = s.words[i];
-    if (!w) return;
-    if (ct >= w.start && ct < w.end) {
-      // Smooth gradient fill within the word
-      const progress = Math.min(100, ((ct - w.start) / (w.end - w.start)) * 100);
-      el.style.setProperty('--word-progress', progress + '%');
-      el.classList.add('word-active');
-      el.classList.remove('word-done');
-    } else if (ct >= w.end) {
-      el.classList.remove('word-active');
-      el.classList.add('word-done');
-      el.style.removeProperty('--word-progress');
-    } else {
-      el.classList.remove('word-active', 'word-done');
-      el.style.removeProperty('--word-progress');
-    }
-  });
 }
 
 function togglePause() {
@@ -681,7 +645,7 @@ function toggleCountdown(minutes) {
   if (cdInterval && cdActiveMinutes === minutes) { clearCountdown(); return; }
   if (cdInterval) clearInterval(cdInterval);
   cdActiveMinutes = minutes; cdTotalSec = minutes * 60; cdRemaining = cdTotalSec;
-  btns.forEach(b => b.classList.remove('cd-active', 'cd-running'));
+  btns.forEach(b => b.classList.remove('cd-running'));
   const activeBtn = [...btns].find(b => b.textContent === minutes + 'm');
   if (activeBtn) activeBtn.classList.add('cd-running');
   updateCdDisplay();
@@ -697,7 +661,7 @@ function updateCdDisplay() {
   const fill = document.getElementById('cdFill');
   const m = Math.floor(cdRemaining / 60), s = cdRemaining % 60;
   el.textContent = `${m}:${String(s).padStart(2, '0')}`;
-  const pct = cdTotalSec > 0 ? (cdRemaining / cdTotalSec * 100) : 100;
+  const pct = cdTotalSec > 0 ? (cdRemaining / cdTotalSec * 100) : 0;
   fill.style.width = pct + '%';
   el.classList.remove('cd-warn', 'cd-done');
   fill.classList.remove('cd-warn-fill', 'cd-done-fill');
@@ -707,7 +671,7 @@ function updateCdDisplay() {
 
 function cdDone() {
   document.getElementById('cdDisplay').textContent = '0:00 ✓';
-  document.querySelectorAll('.cd-btn').forEach(b => { b.classList.remove('cd-running'); b.classList.add('cd-active'); });
+  document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-running'));
   try {
     const ctx = new AudioContext();
     [0, 200, 400].forEach(delay => {
@@ -725,14 +689,14 @@ function clearCountdown() {
   cdActiveMinutes = 0; cdRemaining = 0; cdTotalSec = 0;
   document.getElementById('cdDisplay').textContent = '';
   document.getElementById('cdDisplay').classList.remove('cd-warn', 'cd-done');
-  document.getElementById('cdFill').style.width = '100%';
+  document.getElementById('cdFill').style.width = '0%';
   document.getElementById('cdFill').classList.remove('cd-warn-fill', 'cd-done-fill');
-  document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-active', 'cd-running'));
+  document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-running'));
 }
 
 window.addEventListener('beforeunload', () => {
   const sec = getSessionSeconds();
-  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 });
 
 document.addEventListener('visibilitychange', () => { if (document.hidden && video && !video.paused) video.pause(); });
