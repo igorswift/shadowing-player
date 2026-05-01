@@ -121,6 +121,9 @@
 
   .word { cursor: pointer; transition: color 0.15s; }
   .word:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .split-next { font-size: 18px; font-weight: 400; line-height: 1.5; color: var(--text-dim); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
+  .split-next .word { color: var(--text-dim); }
+  .split-next .word:hover { color: var(--accent); }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
   .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
@@ -192,6 +195,7 @@
     <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
+    <button class="tool-btn" id="splitBtn" onclick="handleSplit()">Split</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -209,6 +213,7 @@
   <div class="phrase-area">
     <div class="phrase-counter" id="phraseCounter">1 / 189</div>
     <div class="phrase-text" id="phraseText">Loading...</div>
+    <div class="split-next" id="splitNext" style="display:none"></div>
     <div class="phrase-time" id="phraseTime">00:00</div>
   </div>
   <div class="controls">
@@ -350,6 +355,7 @@ let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, vide
 let autoPauseEnabled = true, isPausedByUser = false;
 const speeds = [0.75, 1]; let speedIndex = 1;
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
+let splitMode = false, splitEndTime = 0;
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
@@ -408,9 +414,10 @@ function startPlayer() {
 
   function tick() {
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
-      const s = sentences[currentIndex];
-      if (video.currentTime >= s.end - 0.12) {
+      const endTime = splitMode ? splitEndTime : sentences[currentIndex].end;
+      if (video.currentTime >= endTime - 0.12) {
         video.pause();
+        if (splitMode) trackPhrase(currentIndex + 1);
         if (isRecording && shadowMode) stopRecording();
         else if (loopEnabled && loopCount < LOOP_MAX - 1) { loopCount++; setTimeout(() => playPhrase(currentIndex), 600); }
         else loopCount = 0;
@@ -434,6 +441,11 @@ function hideBadge() { document.getElementById('pauseBadge').className = 'pause-
 
 function showPhrase(idx) {
   const s = sentences[idx];
+  // Clear split mode
+  splitMode = false;
+  document.getElementById('splitNext').style.display = 'none';
+  document.getElementById('splitBtn').classList.remove('active');
+
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
   const phraseEl = document.getElementById('phraseText');
   if (s.words && s.words.length) {
@@ -455,8 +467,15 @@ function playPhrase(idx) {
   video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
 }
 
-function nextPhrase() { if (currentIndex < sentences.length-1) { currentIndex++; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
-function prevPhrase() { if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
+function nextPhrase() {
+  const skip = splitMode ? 2 : 1;
+  const next = currentIndex + skip;
+  if (next < sentences.length) { currentIndex = next; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
+}
+function prevPhrase() {
+  if (splitMode) { loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); return; }
+  if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
+}
 function replayPhrase() { loopCount=0; playPhrase(currentIndex); }
 
 function seekToWord(wordIdx) {
@@ -464,6 +483,43 @@ function seekToWord(wordIdx) {
   if (!s.words || !s.words[wordIdx]) return;
   stopAllTakePlayback();
   video.currentTime = s.words[wordIdx].start;
+  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+}
+
+function handleSplit() {
+  const nextIdx = currentIndex + 1;
+  if (nextIdx >= sentences.length) return;
+  const btn = document.getElementById('splitBtn');
+  // Toggle off
+  if (splitMode) { splitMode = false; btn.classList.remove('active'); document.getElementById('splitNext').style.display = 'none'; return; }
+  // Activate split
+  splitMode = true;
+  splitEndTime = sentences[nextIdx].end;
+  btn.classList.add('active');
+  // Show next phrase text below current
+  const splitEl = document.getElementById('splitNext');
+  const ns = sentences[nextIdx];
+  if (ns.words && ns.words.length) {
+    splitEl.innerHTML = ns.words.map((w, i) =>
+      `<span class="word" onclick="seekToWordSplit(${i})">${w.text} </span>`
+    ).join('');
+  } else {
+    splitEl.textContent = ns.text;
+  }
+  splitEl.style.display = '';
+  // Update time display to show combined range
+  const s = sentences[currentIndex];
+  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(ns.end/60), es = Math.floor(ns.end%60);
+  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
+  // Replay from current phrase start, will play through both
+  playPhrase(currentIndex);
+}
+
+function seekToWordSplit(wordIdx) {
+  const ns = sentences[currentIndex + 1];
+  if (!ns || !ns.words || !ns.words[wordIdx]) return;
+  stopAllTakePlayback();
+  video.currentTime = ns.words[wordIdx].start;
   video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
 }
 
@@ -720,6 +776,7 @@ document.addEventListener('keydown', (e) => {
     case 'l': toggleLoop(); break;
     case 'r': handleRec(); break;
     case 'w': handleShadow(); break;
+    case 'f': handleSplit(); break;
   }
 });
 </script>
