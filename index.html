@@ -18,6 +18,7 @@
   }
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
+  /* Setup */
   .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; gap: 20px; }
   .setup-screen h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
   .setup-screen p { color: var(--text-dim); font-size: 14px; text-align: center; max-width: 320px; line-height: 1.5; }
@@ -29,42 +30,44 @@
   .start-btn { width: 100%; max-width: 320px; padding: 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; opacity: 0.3; pointer-events: none; }
   .start-btn.ready { opacity: 1; pointer-events: auto; } .start-btn:active { transform: scale(0.97); }
 
-  /* Stats preview on setup screen */
-  .stats-preview { width: 100%; max-width: 320px; background: var(--surface); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: all 0.2s; }
-  .stats-preview:hover { background: var(--surface2); }
-  .stats-preview-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-muted); margin-bottom: 8px; }
-  .stats-preview-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
-  .stats-preview-label { font-size: 13px; color: var(--text-dim); }
-  .stats-preview-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text); font-weight: 500; }
-  .stats-preview-delta { font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: 6px; }
-  .delta-up { color: var(--accent); }
-  .delta-down { color: var(--orange); }
-  .delta-same { color: var(--text-muted); }
-
   /* History panel */
   .history-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 100; flex-direction: column; padding: 20px 16px; overflow-y: auto; }
   .history-panel.open { display: flex; }
   .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
   .history-header h2 { font-size: 20px; font-weight: 700; color: var(--accent); }
   .history-close { padding: 8px 16px; border: 1px solid var(--text-muted); border-radius: 20px; background: transparent; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
+  .history-total { background: var(--accent-dim); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .history-total-title { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); margin-bottom: 8px; font-weight: 500; }
+  .history-total-stats { display: flex; gap: 20px; }
+  .history-total-stat { display: flex; flex-direction: column; gap: 2px; }
+  .history-total-val { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: var(--text); font-weight: 700; }
+  .history-total-lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); }
   .history-day { background: var(--surface); border-radius: 12px; padding: 14px 16px; margin-bottom: 8px; }
-  .history-date { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 8px; }
-  .history-stats { display: flex; gap: 16px; flex-wrap: wrap; }
+  .history-day.today { border: 1px solid var(--accent-dim); }
+  .history-date { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--accent); font-weight: 500; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+  .history-date .today-badge { font-size: 10px; background: var(--accent-dim); color: var(--accent); padding: 2px 8px; border-radius: 8px; }
+  .history-stats { display: flex; gap: 20px; flex-wrap: wrap; }
   .history-stat { display: flex; flex-direction: column; gap: 2px; }
   .history-stat-val { font-family: 'JetBrains Mono', monospace; font-size: 15px; color: var(--text); font-weight: 500; }
   .history-stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
   .history-empty { color: var(--text-muted); font-size: 14px; text-align: center; padding: 40px; }
+  .delta-up { color: var(--accent); } .delta-down { color: var(--orange); } .delta-same { color: var(--text-muted); }
 
+  /* Player */
   .player-screen { display: none; flex-direction: column; height: 100dvh; }
   .player-screen.active { display: flex; }
 
-  /* Session bar */
-  .session-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px; background: var(--surface); flex-shrink: 0; cursor: pointer; }
+  /* Session bar — always visible */
+  .session-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: var(--surface); flex-shrink: 0; cursor: pointer; border-bottom: 1px solid var(--surface2); }
   .session-bar:active { background: var(--surface2); }
-  .session-timer { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--accent); font-weight: 500; }
-  .session-stats { display: flex; gap: 12px; }
-  .session-stat { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
-  .session-stat span { color: var(--text); font-weight: 500; }
+  .session-left { display: flex; align-items: center; gap: 12px; }
+  .session-timer { font-family: 'JetBrains Mono', monospace; font-size: 16px; color: var(--accent); font-weight: 700; }
+  .session-today { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); }
+  .session-stats { display: flex; gap: 14px; }
+  .session-stat { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .session-stat-val { color: var(--text); font-weight: 600; font-size: 14px; }
+  .session-stat-lbl { font-size: 9px; color: var(--text-muted); }
+  .session-history-btn { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); background: none; border: 1px solid var(--text-muted); border-radius: 10px; padding: 3px 8px; cursor: pointer; }
 
   .video-wrap { position: relative; width: 100%; flex-shrink: 0; background: #000; }
   .video-wrap video { width: 100%; display: block; max-height: 28dvh; object-fit: contain; background: #000; }
@@ -142,10 +145,8 @@
   </div>
   <input type="file" id="jsonInput" accept=".json">
   <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
-  <div class="stats-preview" id="statsPreview" onclick="openHistory()"></div>
 </div>
 
-<!-- History panel -->
 <div class="history-panel" id="historyPanel">
   <div class="history-header">
     <h2>Practice History</h2>
@@ -156,11 +157,15 @@
 
 <div class="player-screen" id="player">
   <div class="session-bar" onclick="openHistory()">
-    <span class="session-timer" id="sessionTimer">00:00</span>
-    <div class="session-stats">
-      <span class="session-stat">Phrases: <span id="sessionPhrases">0</span></span>
-      <span class="session-stat">Recs: <span id="sessionRecs">0</span></span>
+    <div class="session-left">
+      <span class="session-timer" id="sessionTimer">00:00</span>
+      <span class="session-today" id="sessionDate"></span>
     </div>
+    <div class="session-stats">
+      <div class="session-stat"><span class="session-stat-val" id="sessionPhrases">0</span><span class="session-stat-lbl">phrases</span></div>
+      <div class="session-stat"><span class="session-stat-val" id="sessionRecs">0</span><span class="session-stat-lbl">recs</span></div>
+    </div>
+    <button class="session-history-btn" onclick="event.stopPropagation(); openHistory()">history</button>
   </div>
   <div class="video-wrap">
     <video id="video" playsinline></video>
@@ -191,71 +196,23 @@
 </div>
 
 <script>
-// ===== STATS & STORAGE =====
+// ===== STATS =====
 const STORAGE_KEY = 'shadowing_stats';
-
 function todayKey() { return new Date().toISOString().slice(0, 10); }
-
-function loadStats() {
-  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; }
+function formatDate(key) {
+  const d = new Date(key + 'T00:00:00');
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
-
-function saveStats(stats) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
-}
-
-function getTodayStats() {
-  const stats = loadStats();
-  return stats[todayKey()] || { minutes: 0, phrases: 0, recs: 0 };
-}
-
-function updateTodayStats(updates) {
-  const stats = loadStats();
-  const key = todayKey();
-  if (!stats[key]) stats[key] = { minutes: 0, phrases: 0, recs: 0 };
-  Object.assign(stats[key], updates);
-  saveStats(stats);
-}
-
-function renderStatsPreview() {
-  const el = document.getElementById('statsPreview');
-  const stats = loadStats();
-  const days = Object.keys(stats).sort().reverse();
-
-  if (days.length === 0) {
-    el.innerHTML = '<div class="stats-preview-title">No practice history yet</div>';
-    return;
-  }
-
-  const today = days[0];
-  const todayData = stats[today];
-  const yesterday = days.length > 1 ? stats[days[1]] : null;
-
-  function delta(curr, prev, unit) {
-    if (!prev) return '';
-    const d = curr - prev;
-    if (d === 0) return `<span class="stats-preview-delta delta-same">=</span>`;
-    const cls = d > 0 ? 'delta-up' : 'delta-down';
-    const arrow = d > 0 ? '↑' : '↓';
-    return `<span class="stats-preview-delta ${cls}">${arrow}${Math.abs(d)}${unit}</span>`;
-  }
-
-  el.innerHTML = `
-    <div class="stats-preview-title">LAST SESSION — ${today}</div>
-    <div class="stats-preview-row">
-      <span class="stats-preview-label">Time</span>
-      <span class="stats-preview-value">${todayData.minutes} min ${delta(todayData.minutes, yesterday?.minutes, 'min')}</span>
-    </div>
-    <div class="stats-preview-row">
-      <span class="stats-preview-label">Phrases</span>
-      <span class="stats-preview-value">${todayData.phrases} ${delta(todayData.phrases, yesterday?.phrases, '')}</span>
-    </div>
-    <div class="stats-preview-row">
-      <span class="stats-preview-label">Recordings</span>
-      <span class="stats-preview-value">${todayData.recs} ${delta(todayData.recs, yesterday?.recs, '')}</span>
-    </div>
-    <div style="font-family:JetBrains Mono,monospace;font-size:10px;color:var(--text-muted);margin-top:8px;text-align:center;">Tap for full history</div>
-  `;
+function loadStats() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
+function saveStats(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+function getTodayStats() { const s = loadStats(); return s[todayKey()] || { minutes: 0, phrases: 0, recs: 0 }; }
+function updateTodayStats(u) {
+  const s = loadStats(), k = todayKey();
+  if (!s[k]) s[k] = { minutes: 0, phrases: 0, recs: 0 };
+  Object.assign(s[k], u);
+  saveStats(s);
 }
 
 function openHistory() {
@@ -264,59 +221,87 @@ function openHistory() {
   const stats = loadStats();
   const days = Object.keys(stats).sort().reverse();
 
+  // Update today's stats before showing
+  const sec = getSessionSeconds();
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+
   if (days.length === 0) {
-    list.innerHTML = '<div class="history-empty">No practice sessions recorded yet.</div>';
-  } else {
-    list.innerHTML = days.map((day, i) => {
-      const d = stats[day];
-      const prev = i < days.length - 1 ? stats[days[i + 1]] : null;
-
-      function arrow(curr, prevVal) {
-        if (!prev || prevVal === undefined) return '';
-        const diff = curr - prevVal;
-        if (diff === 0) return ' <span class="delta-same">=</span>';
-        return diff > 0 ? ` <span class="delta-up">↑${diff}</span>` : ` <span class="delta-down">↓${Math.abs(diff)}</span>`;
-      }
-
-      return `<div class="history-day">
-        <div class="history-date">${day}</div>
-        <div class="history-stats">
-          <div class="history-stat"><div class="history-stat-val">${d.minutes} min${arrow(d.minutes, prev?.minutes)}</div><div class="history-stat-lbl">TIME</div></div>
-          <div class="history-stat"><div class="history-stat-val">${d.phrases}${arrow(d.phrases, prev?.phrases)}</div><div class="history-stat-lbl">PHRASES</div></div>
-          <div class="history-stat"><div class="history-stat-val">${d.recs}${arrow(d.recs, prev?.recs)}</div><div class="history-stat-lbl">RECS</div></div>
-        </div>
-      </div>`;
-    }).join('');
+    list.innerHTML = '<div class="history-empty">No practice sessions yet.</div>';
+    panel.classList.add('open');
+    return;
   }
+
+  // Totals
+  let totalMin = 0, totalPhrases = 0, totalRecs = 0;
+  days.forEach(d => { totalMin += stats[d].minutes; totalPhrases += stats[d].phrases; totalRecs += stats[d].recs; });
+
+  let html = `
+    <div class="history-total">
+      <div class="history-total-title">ALL TIME — ${days.length} days</div>
+      <div class="history-total-stats">
+        <div class="history-total-stat"><div class="history-total-val">${totalMin} min</div><div class="history-total-lbl">TOTAL TIME</div></div>
+        <div class="history-total-stat"><div class="history-total-val">${totalPhrases}</div><div class="history-total-lbl">PHRASES</div></div>
+        <div class="history-total-stat"><div class="history-total-val">${totalRecs}</div><div class="history-total-lbl">RECS</div></div>
+        <div class="history-total-stat"><div class="history-total-val">${Math.round(totalMin / days.length)}</div><div class="history-total-lbl">AVG MIN/DAY</div></div>
+      </div>
+    </div>
+  `;
+
+  html += days.map((day, i) => {
+    const d = stats[day];
+    const prev = i < days.length - 1 ? stats[days[i + 1]] : null;
+    const isToday = day === todayKey();
+
+    function arrow(curr, prevVal) {
+      if (!prev || prevVal === undefined) return '';
+      const diff = curr - prevVal;
+      if (diff === 0) return ' <span class="delta-same">=</span>';
+      return diff > 0 ? ` <span class="delta-up">↑${diff}</span>` : ` <span class="delta-down">↓${Math.abs(diff)}</span>`;
+    }
+
+    return `<div class="history-day ${isToday ? 'today' : ''}">
+      <div class="history-date">
+        <span>${formatDate(day)}</span>
+        ${isToday ? '<span class="today-badge">TODAY</span>' : ''}
+      </div>
+      <div class="history-stats">
+        <div class="history-stat"><div class="history-stat-val">${d.minutes} min${arrow(d.minutes, prev?.minutes)}</div><div class="history-stat-lbl">TIME</div></div>
+        <div class="history-stat"><div class="history-stat-val">${d.phrases}${arrow(d.phrases, prev?.phrases)}</div><div class="history-stat-lbl">PHRASES</div></div>
+        <div class="history-stat"><div class="history-stat-val">${d.recs}${arrow(d.recs, prev?.recs)}</div><div class="history-stat-lbl">RECS</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  list.innerHTML = html;
   panel.classList.add('open');
 }
 
 function closeHistory() { document.getElementById('historyPanel').classList.remove('open'); }
 
-// ===== SESSION TRACKING =====
-let sessionStartTime = null;
-let sessionTimerInterval = null;
-let sessionPhrasesVisited = new Set();
-let sessionRecCount = 0;
-let sessionPaused = false;
-let sessionElapsed = 0; // ms accumulated before pause
+// ===== SESSION =====
+let sessionStartTime = null, sessionTimerInterval = null;
+let sessionPhrasesVisited = new Set(), sessionRecCount = 0;
+let sessionElapsed = 0;
 
 function startSessionTimer() {
   sessionStartTime = Date.now();
   sessionElapsed = 0;
   sessionPhrasesVisited = new Set();
   sessionRecCount = 0;
+
+  // Show today's date
+  document.getElementById('sessionDate').textContent = formatDate(todayKey());
+
+  // Load existing today stats to continue accumulating
+  const existing = getTodayStats();
+  sessionElapsed = existing.minutes * 60 * 1000;
+  sessionStartTime = Date.now();
+
   updateSessionUI();
-
-  sessionTimerInterval = setInterval(() => {
-    if (!sessionPaused) updateSessionUI();
-  }, 1000);
+  sessionTimerInterval = setInterval(updateSessionUI, 1000);
 }
 
-function getSessionSeconds() {
-  const running = sessionPaused ? 0 : (Date.now() - sessionStartTime);
-  return Math.floor((sessionElapsed + running) / 1000);
-}
+function getSessionSeconds() { return Math.floor((sessionElapsed + (Date.now() - sessionStartTime)) / 1000); }
 
 function updateSessionUI() {
   const sec = getSessionSeconds();
@@ -324,37 +309,21 @@ function updateSessionUI() {
   document.getElementById('sessionTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   document.getElementById('sessionPhrases').textContent = sessionPhrasesVisited.size;
   document.getElementById('sessionRecs').textContent = sessionRecCount;
-
-  // Save to localStorage every 10 seconds
-  if (sec % 10 === 0) {
-    updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
-  }
+  if (sec % 10 === 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 }
 
 function trackPhrase(idx) { sessionPhrasesVisited.add(idx); }
 function trackRec() { sessionRecCount++; }
 
-// ===== MAIN PLAYER =====
+// ===== PLAYER =====
 let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
 let autoPauseEnabled = true, isPausedByUser = false;
-
-const speeds = [0.75, 1];
-let speedIndex = 1;
-let loopEnabled = false, loopCount = 0;
-const LOOP_MAX = 3;
-const MAX_TAKES = 5;
-
+const speeds = [0.75, 1]; let speedIndex = 1;
+let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
-
-let takes = [];
-let playingTakeIdx = -1;
-let takeProgressInterval = null;
-let mixPlaying = false;
-
-// Init
-renderStatsPreview();
+let takes = [], playingTakeIdx = -1, takeProgressInterval = null, mixPlaying = false;
 
 document.getElementById('videoInput').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
@@ -367,11 +336,9 @@ document.getElementById('jsonInput').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = (ev) => {
-    try {
-      sentences = parseTranscript(JSON.parse(ev.target.result));
+    try { sentences = parseTranscript(JSON.parse(ev.target.result));
       document.getElementById('jsonStatus').textContent = `${sentences.length} phrases`;
-      document.getElementById('jsonPicker').classList.add('loaded');
-      checkReady();
+      document.getElementById('jsonPicker').classList.add('loaded'); checkReady();
     } catch(err) { document.getElementById('jsonStatus').textContent = 'Error'; }
   };
   r.readAsText(f);
@@ -401,7 +368,6 @@ function startPlayer() {
   video = document.getElementById('video');
   video.src = URL.createObjectURL(videoFile);
   video.load();
-
   startSessionTimer();
 
   function tick() {
@@ -409,9 +375,9 @@ function startPlayer() {
       const s = sentences[currentIndex];
       if (video.currentTime >= s.end - 0.12) {
         video.pause();
-        if (isRecording && shadowMode) { stopRecording(); }
+        if (isRecording && shadowMode) stopRecording();
         else if (loopEnabled && loopCount < LOOP_MAX - 1) { loopCount++; setTimeout(() => playPhrase(currentIndex), 600); }
-        else { loopCount = 0; }
+        else loopCount = 0;
       }
     }
     requestAnimationFrame(tick);
@@ -420,16 +386,11 @@ function startPlayer() {
 
   video.addEventListener('pause', () => { if (!recPreparing && !isRecording) setBadge('YOUR TURN', 'visible'); });
   video.addEventListener('play', () => {
-    if (!isRecording && !mixPlaying) {
-      hideBadge(); isPausedByUser = false;
-      document.getElementById('pauseIcon').textContent = '⏸';
-      document.getElementById('pauseLabel').textContent = 'Pause';
-    }
+    if (!isRecording && !mixPlaying) { hideBadge(); isPausedByUser = false;
+      document.getElementById('pauseIcon').textContent = '⏸'; document.getElementById('pauseLabel').textContent = 'Pause'; }
   });
 
-  currentIndex = 0;
-  showPhrase(currentIndex);
-  playPhrase(currentIndex);
+  currentIndex = 0; showPhrase(currentIndex); playPhrase(currentIndex);
 }
 
 function setBadge(t, c) { const b = document.getElementById('pauseBadge'); b.textContent = t; b.className = 'pause-badge ' + c; }
@@ -443,17 +404,12 @@ function showPhrase(idx) {
   const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
   document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
   document.getElementById('progressFill').style.width = ((idx+1)/sentences.length*100)+'%';
-  clearAllTakes();
-  trackPhrase(idx);
+  clearAllTakes(); trackPhrase(idx);
 }
 
 function playPhrase(idx) {
-  stopAllTakePlayback();
-  const s = sentences[idx];
-  video.currentTime = s.start;
-  video.playbackRate = speeds[speedIndex];
-  video.volume = 1;
-  video.play();
+  stopAllTakePlayback(); const s = sentences[idx];
+  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
 }
 
 function nextPhrase() { if (currentIndex < sentences.length-1) { currentIndex++; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
@@ -486,48 +442,37 @@ function toggleLoop() {
   btn.classList.toggle('active', loopEnabled);
 }
 
-// --- REC ---
+// --- REC / SHADOW ---
 function handleRec() {
   if (isRecording) { stopRecording(); return; }
   if (recPreparing) return;
-  if (takes.length >= MAX_TAKES) { clearAllTakes(); }
-  shadowMode = false;
-  startRecFlow();
+  if (takes.length >= MAX_TAKES) clearAllTakes();
+  shadowMode = false; startRecFlow();
 }
-
 function handleShadow() {
   if (isRecording) { stopRecording(); return; }
   if (recPreparing) return;
-  if (takes.length >= MAX_TAKES) { clearAllTakes(); }
-  shadowMode = true;
-  startShadowFlow();
+  if (takes.length >= MAX_TAKES) clearAllTakes();
+  shadowMode = true; startShadowFlow();
 }
 
 async function startRecFlow() {
-  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch(err) { alert('Microphone access denied'); return; }
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { alert('Mic denied'); return; }
   recPreparing = true;
-  document.getElementById('recBtn').classList.add('preparing');
-  document.getElementById('recBtn').textContent = 'Listen...';
+  document.getElementById('recBtn').classList.add('preparing'); document.getElementById('recBtn').textContent = 'Listen...';
   stopAllTakePlayback();
   const s = sentences[currentIndex];
   video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
   setBadge('LISTEN', 'visible');
-  function waitEnd() {
-    if (video.currentTime >= s.end - 0.12) { video.pause(); doCountdown(2, false); return; }
-    requestAnimationFrame(waitEnd);
-  }
+  function waitEnd() { if (video.currentTime >= s.end - 0.12) { video.pause(); doCountdown(2, false); return; } requestAnimationFrame(waitEnd); }
   requestAnimationFrame(waitEnd);
 }
 
 async function startShadowFlow() {
-  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
-  catch(err) { alert('Microphone access denied'); return; }
+  try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch { alert('Mic denied'); return; }
   recPreparing = true;
-  document.getElementById('shadowBtn').classList.add('preparing');
-  document.getElementById('shadowBtn').textContent = 'Ready...';
-  stopAllTakePlayback();
-  doCountdown(2, true);
+  document.getElementById('shadowBtn').classList.add('preparing'); document.getElementById('shadowBtn').textContent = 'Ready...';
+  stopAllTakePlayback(); doCountdown(2, true);
 }
 
 function doCountdown(n, isShadow) {
@@ -543,14 +488,10 @@ function beginRecording() {
   mediaRecorder = new MediaRecorder(micStream);
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => finishRecording('rec');
-  mediaRecorder.start();
-  recStartTime = Date.now();
-  document.getElementById('recBtn').textContent = '● REC';
-  document.getElementById('recBtn').classList.remove('preparing');
-  document.getElementById('recBtn').classList.add('rec-active');
+  mediaRecorder.start(); recStartTime = Date.now();
+  document.getElementById('recBtn').textContent = '● REC'; document.getElementById('recBtn').classList.remove('preparing'); document.getElementById('recBtn').classList.add('rec-active');
   document.getElementById('stopBtn').style.display = '';
-  const timer = document.getElementById('recTimer');
-  timer.style.display = ''; timer.className = 'rec-timer';
+  const timer = document.getElementById('recTimer'); timer.style.display = ''; timer.className = 'rec-timer';
   setBadge('● REC', 'visible recording');
   recTimerInterval = setInterval(() => { timer.textContent = ((Date.now() - recStartTime) / 1000).toFixed(1) + 's'; }, 100);
 }
@@ -560,16 +501,12 @@ function beginShadowRecording() {
   mediaRecorder = new MediaRecorder(micStream);
   mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
   mediaRecorder.onstop = () => finishRecording('shadow');
-  mediaRecorder.start();
-  recStartTime = Date.now();
+  mediaRecorder.start(); recStartTime = Date.now();
   const s = sentences[currentIndex];
   video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-  document.getElementById('shadowBtn').textContent = '● SHADOW';
-  document.getElementById('shadowBtn').classList.remove('preparing');
-  document.getElementById('shadowBtn').classList.add('shadow-active');
+  document.getElementById('shadowBtn').textContent = '● SHADOW'; document.getElementById('shadowBtn').classList.remove('preparing'); document.getElementById('shadowBtn').classList.add('shadow-active');
   document.getElementById('stopBtn').style.display = '';
-  const timer = document.getElementById('recTimer');
-  timer.style.display = ''; timer.className = 'rec-timer shadow-timer';
+  const timer = document.getElementById('recTimer'); timer.style.display = ''; timer.className = 'rec-timer shadow-timer';
   setBadge('● SHADOW', 'visible shadow');
   recTimerInterval = setInterval(() => { timer.textContent = ((Date.now() - recStartTime) / 1000).toFixed(1) + 's'; }, 100);
 }
@@ -580,20 +517,11 @@ function finishRecording(type) {
   const dur = (Date.now() - recStartTime) / 1000;
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
   isRecording = false; clearInterval(recTimerInterval);
-  takes.push({ audio, duration: dur, type });
-  trackRec();
-  renderTakes();
-  const recBtn = document.getElementById('recBtn');
-  const shadowBtn = document.getElementById('shadowBtn');
-  if (takes.length >= MAX_TAKES) {
-    recBtn.textContent = 'Reset'; recBtn.className = 'tool-btn has-rec';
-    shadowBtn.textContent = 'Reset'; shadowBtn.className = 'tool-btn has-rec';
-  } else {
-    recBtn.textContent = 'Rec'; recBtn.className = 'tool-btn';
-    shadowBtn.textContent = 'Shadow'; shadowBtn.className = 'tool-btn';
-  }
-  document.getElementById('stopBtn').style.display = 'none';
-  document.getElementById('recTimer').style.display = 'none';
+  takes.push({ audio, duration: dur, type }); trackRec(); renderTakes();
+  const recBtn = document.getElementById('recBtn'), shadowBtn = document.getElementById('shadowBtn');
+  if (takes.length >= MAX_TAKES) { recBtn.textContent = 'Reset'; recBtn.className = 'tool-btn has-rec'; shadowBtn.textContent = 'Reset'; shadowBtn.className = 'tool-btn has-rec'; }
+  else { recBtn.textContent = 'Rec'; recBtn.className = 'tool-btn'; shadowBtn.textContent = 'Shadow'; shadowBtn.className = 'tool-btn'; }
+  document.getElementById('stopBtn').style.display = 'none'; document.getElementById('recTimer').style.display = 'none';
   setBadge('SAVED', 'visible');
   setTimeout(() => playTake(takes.length - 1), 200);
 }
@@ -605,15 +533,9 @@ function renderTakes() {
   const area = document.getElementById('takesArea');
   const origDur = (sentences[currentIndex].end - sentences[currentIndex].start).toFixed(1);
   area.innerHTML = '';
-  if (takes.length > 0) {
-    const info = document.createElement('div');
-    info.className = 'takes-orig';
-    info.textContent = `Original: ${origDur}s`;
-    area.appendChild(info);
-  }
+  if (takes.length > 0) { const info = document.createElement('div'); info.className = 'takes-orig'; info.textContent = `Original: ${origDur}s`; area.appendChild(info); }
   takes.forEach((take, i) => {
-    const row = document.createElement('div');
-    row.className = 'take-row'; row.id = 'take-row-' + i;
+    const row = document.createElement('div'); row.className = 'take-row'; row.id = 'take-row-' + i;
     const diff = (take.duration - parseFloat(origDur)).toFixed(1);
     const diffStr = diff > 0 ? `+${diff}` : diff;
     const diffColor = Math.abs(diff) < 0.5 ? 'var(--accent)' : (diff > 0 ? 'var(--orange)' : 'var(--text-dim)');
@@ -621,94 +543,64 @@ function renderTakes() {
     const typeLabel = take.type === 'shadow' ? 'Shadow' : 'Rec';
     const barClass = take.type === 'shadow' ? 'shadow-fill' : 'rec-fill';
     let mixBtn = take.type === 'shadow' ? `<button class="take-mix-btn" id="take-mix-${i}" onclick="toggleMix(${i})">Mix</button>` : '';
-    row.innerHTML = `
-      <span class="take-num">${i+1} <span class="take-type ${typeClass}">${typeLabel}</span></span>
+    row.innerHTML = `<span class="take-num">${i+1} <span class="take-type ${typeClass}">${typeLabel}</span></span>
       <span class="take-time">${take.duration.toFixed(1)}s</span>
       <div class="take-bar"><div class="take-bar-fill ${barClass}" id="take-bar-${i}" style="width:0%"></div></div>
-      <span class="take-time" style="color:${diffColor}">${diffStr}s</span>
-      ${mixBtn}
-      <button class="take-btn" id="take-btn-${i}" onclick="toggleTake(${i})">▶</button>
-    `;
+      <span class="take-time" style="color:${diffColor}">${diffStr}s</span>${mixBtn}
+      <button class="take-btn" id="take-btn-${i}" onclick="toggleTake(${i})">▶</button>`;
     area.appendChild(row);
   });
 }
 
 function toggleTake(idx) { if (playingTakeIdx === idx && !mixPlaying) stopAllTakePlayback(); else playTake(idx); }
-
 function playTake(idx) {
-  stopAllTakePlayback();
-  const take = takes[idx]; if (!take) return;
-  playingTakeIdx = idx;
-  take.audio.currentTime = 0; take.audio.play();
-  const btn = document.getElementById('take-btn-' + idx);
-  if (btn) { btn.textContent = '■'; btn.classList.add('playing'); }
-  takeProgressInterval = setInterval(() => {
-    const bar = document.getElementById('take-bar-' + idx);
-    if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%';
-  }, 50);
+  stopAllTakePlayback(); const take = takes[idx]; if (!take) return;
+  playingTakeIdx = idx; take.audio.currentTime = 0; take.audio.play();
+  const btn = document.getElementById('take-btn-' + idx); if (btn) { btn.textContent = '■'; btn.classList.add('playing'); }
+  takeProgressInterval = setInterval(() => { const bar = document.getElementById('take-bar-' + idx); if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%'; }, 50);
   take.audio.onended = () => stopAllTakePlayback();
 }
 
 function toggleMix(idx) {
   if (mixPlaying && playingTakeIdx === idx) { stopAllTakePlayback(); return; }
-  stopAllTakePlayback();
-  const take = takes[idx]; if (!take || take.type !== 'shadow') return;
+  stopAllTakePlayback(); const take = takes[idx]; if (!take || take.type !== 'shadow') return;
   mixPlaying = true; playingTakeIdx = idx;
-  const s = sentences[currentIndex];
-  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 0.5; video.play();
+  const s = sentences[currentIndex]; video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 0.5; video.play();
   take.audio.currentTime = 0; take.audio.play();
-  const mixBtn = document.getElementById('take-mix-' + idx);
-  if (mixBtn) { mixBtn.textContent = '■ Mix'; mixBtn.classList.add('playing'); }
-  takeProgressInterval = setInterval(() => {
-    const bar = document.getElementById('take-bar-' + idx);
-    if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%';
-  }, 50);
+  const mixBtn = document.getElementById('take-mix-' + idx); if (mixBtn) { mixBtn.textContent = '■ Mix'; mixBtn.classList.add('playing'); }
+  takeProgressInterval = setInterval(() => { const bar = document.getElementById('take-bar-' + idx); if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%'; }, 50);
   take.audio.onended = () => { video.pause(); video.volume = 1; stopAllTakePlayback(); };
 }
 
 function stopAllTakePlayback() {
-  clearInterval(takeProgressInterval); mixPlaying = false;
-  if (video) video.volume = 1;
-  takes.forEach((t, i) => {
-    t.audio.pause(); t.audio.currentTime = 0;
+  clearInterval(takeProgressInterval); mixPlaying = false; if (video) video.volume = 1;
+  takes.forEach((t, i) => { t.audio.pause(); t.audio.currentTime = 0;
     const btn = document.getElementById('take-btn-' + i); if (btn) { btn.textContent = '▶'; btn.classList.remove('playing'); }
     const bar = document.getElementById('take-bar-' + i); if (bar) bar.style.width = '0%';
     const mix = document.getElementById('take-mix-' + i); if (mix) { mix.textContent = 'Mix'; mix.classList.remove('playing'); }
-  });
-  playingTakeIdx = -1;
+  }); playingTakeIdx = -1;
 }
 
 function clearAllTakes() {
-  stopAllTakePlayback();
-  takes.forEach(t => t.audio.pause()); takes = [];
+  stopAllTakePlayback(); takes.forEach(t => t.audio.pause()); takes = [];
   document.getElementById('takesArea').innerHTML = '';
   if (isRecording && mediaRecorder) mediaRecorder.stop();
   if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-  isRecording = false; recPreparing = false; shadowMode = false;
-  clearInterval(recTimerInterval);
+  isRecording = false; recPreparing = false; shadowMode = false; clearInterval(recTimerInterval);
   document.getElementById('recBtn').textContent = 'Rec'; document.getElementById('recBtn').className = 'tool-btn';
   document.getElementById('shadowBtn').textContent = 'Shadow'; document.getElementById('shadowBtn').className = 'tool-btn';
-  document.getElementById('stopBtn').style.display = 'none';
-  document.getElementById('recTimer').style.display = 'none';
+  document.getElementById('stopBtn').style.display = 'none'; document.getElementById('recTimer').style.display = 'none';
 }
 
-// Save on close
 window.addEventListener('beforeunload', () => {
   const sec = getSessionSeconds();
   if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 });
 
-// Tab switch
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden && video && !video.paused) video.pause();
-});
+document.addEventListener('visibilitychange', () => { if (document.hidden && video && !video.paused) video.pause(); });
 
-// Keyboard
 document.addEventListener('keydown', (e) => {
-  if (document.getElementById('historyPanel').classList.contains('open')) {
-    if (e.key === 'Escape') closeHistory();
-    return;
-  }
+  if (document.getElementById('historyPanel').classList.contains('open')) { if (e.key === 'Escape') closeHistory(); return; }
   if (!document.getElementById('player').classList.contains('active')) return;
   switch(e.key) {
     case 'ArrowRight': nextPhrase(); break;
