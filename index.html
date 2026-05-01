@@ -121,8 +121,7 @@
 
   .word { cursor: pointer; transition: color 0.15s; }
   .word:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .split-next { font-size: 18px; font-weight: 400; line-height: 1.5; color: var(--text-dim); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
-  .split-next .word { color: var(--text-dim); }
+  .split-next { font-size: 18px; font-weight: 400; line-height: 1.5; color: var(--text); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
   .split-next .word:hover { color: var(--accent); }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
@@ -195,7 +194,6 @@
     <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
-    <button class="tool-btn" id="splitBtn" onclick="handleSplit()">Split</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -221,6 +219,7 @@
     <button class="ctrl-btn" onclick="replayPhrase()"><span class="ctrl-icon">🔄</span>Replay</button>
     <button class="ctrl-btn" onclick="togglePause()"><span class="ctrl-icon" id="pauseIcon">⏸</span><span id="pauseLabel">Pause</span></button>
     <button class="ctrl-btn" onclick="toggleText()"><span class="ctrl-icon">👁</span><span id="toggleLabel">Hide</span></button>
+    <button class="ctrl-btn" id="splitBtn" onclick="handleSplit()"><span class="ctrl-icon">⛓</span><span id="splitLabel">Split</span></button>
     <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
   </div>
 </div>
@@ -444,7 +443,8 @@ function showPhrase(idx) {
   // Clear split mode
   splitMode = false;
   document.getElementById('splitNext').style.display = 'none';
-  document.getElementById('splitBtn').classList.remove('active');
+  document.getElementById('splitBtn').classList.remove('accent-btn');
+  document.getElementById('splitLabel').textContent = 'Split';
 
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
   const phraseEl = document.getElementById('phraseText');
@@ -491,11 +491,21 @@ function handleSplit() {
   if (nextIdx >= sentences.length) return;
   const btn = document.getElementById('splitBtn');
   // Toggle off
-  if (splitMode) { splitMode = false; btn.classList.remove('active'); document.getElementById('splitNext').style.display = 'none'; return; }
+  if (splitMode) {
+    splitMode = false; btn.classList.remove('accent-btn');
+    document.getElementById('splitLabel').textContent = 'Split';
+    document.getElementById('splitNext').style.display = 'none';
+    // Restore single phrase time
+    const s = sentences[currentIndex];
+    const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
+    document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
+    return;
+  }
   // Activate split
   splitMode = true;
   splitEndTime = sentences[nextIdx].end;
-  btn.classList.add('active');
+  btn.classList.add('accent-btn');
+  document.getElementById('splitLabel').textContent = 'Split';
   // Show next phrase text below current
   const splitEl = document.getElementById('splitNext');
   const ns = sentences[nextIdx];
