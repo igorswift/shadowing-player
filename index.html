@@ -115,9 +115,19 @@
 
   .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; }
   .phrase-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; flex: 1; display: flex; align-items: center; transition: opacity 0.2s; }
+  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; flex: 1; display: flex; align-items: center; transition: opacity 0.2s; flex-wrap: wrap; align-content: center; }
   .phrase-text.dimmed { opacity: 0.15; }
   .phrase-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+
+  /* Karaoke words */
+  .word { cursor: pointer; transition: color 0.15s; padding: 0 1px; position: relative; }
+  .word:hover { color: var(--accent); }
+  .word-active {
+    background: linear-gradient(90deg, #fbbf24 var(--word-progress, 0%), var(--text) var(--word-progress, 0%));
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .word-done { color: var(--text); opacity: 0.45; }
+  .word-space { width: 0.3em; display: inline-block; }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
   .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
@@ -129,12 +139,6 @@
 
   @media (min-width: 768px) { .player-screen { max-width: 480px; margin: 0 auto; } .phrase-text { font-size: 26px; } }
   input[type="file"] { display: none; }
-
-  /* Karaoke words */
-  .word { cursor: pointer; transition: color 0.1s, text-shadow 0.1s; border-radius: 4px; padding: 0 2px; }
-  .word:hover { color: var(--accent); }
-  .word-active { color: #fbbf24; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); }
-  .word-done { color: var(--text); opacity: 0.55; }
 
   /* Countdown timer */
   .countdown-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; flex-shrink: 0; }
@@ -438,9 +442,10 @@ function showPhrase(idx) {
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
   const phraseEl = document.getElementById('phraseText');
   if (s.words && s.words.length) {
-    phraseEl.innerHTML = s.words.map((w, i) =>
-      `<span class="word" data-widx="${i}" onclick="seekToWord(${i})">${w.text}</span>`
-    ).join(' ');
+    phraseEl.innerHTML = s.words.map((w, i) => {
+      const space = i < s.words.length - 1 ? '<span class="word-space"> </span>' : '';
+      return `<span class="word" data-widx="${i}" onclick="seekToWord(${i})">${w.text}</span>${space}`;
+    }).join('');
   } else {
     phraseEl.textContent = s.text;
   }
@@ -476,9 +481,21 @@ function updateKaraoke() {
   const wordEls = document.querySelectorAll('#phraseText .word');
   wordEls.forEach((el, i) => {
     const w = s.words[i];
-    if (w && ct >= w.start && ct < w.end) el.classList.add('word-active');
-    else if (w && ct >= w.end) { el.classList.remove('word-active'); el.classList.add('word-done'); }
-    else { el.classList.remove('word-active', 'word-done'); }
+    if (!w) return;
+    if (ct >= w.start && ct < w.end) {
+      // Smooth gradient fill within the word
+      const progress = Math.min(100, ((ct - w.start) / (w.end - w.start)) * 100);
+      el.style.setProperty('--word-progress', progress + '%');
+      el.classList.add('word-active');
+      el.classList.remove('word-done');
+    } else if (ct >= w.end) {
+      el.classList.remove('word-active');
+      el.classList.add('word-done');
+      el.style.removeProperty('--word-progress');
+    } else {
+      el.classList.remove('word-active', 'word-done');
+      el.style.removeProperty('--word-progress');
+    }
   });
 }
 
@@ -663,19 +680,16 @@ let cdInterval = null, cdTotalSec = 0, cdRemaining = 0, cdActiveMinutes = 0;
 
 function toggleCountdown(minutes) {
   const btns = document.querySelectorAll('.cd-btn');
-  // If same timer is running, stop it
   if (cdInterval && cdActiveMinutes === minutes) { clearCountdown(); return; }
-  // Start new timer
   if (cdInterval) clearInterval(cdInterval);
   cdActiveMinutes = minutes; cdTotalSec = minutes * 60; cdRemaining = cdTotalSec;
-  btns.forEach(b => { b.classList.remove('cd-active', 'cd-running'); });
+  btns.forEach(b => b.classList.remove('cd-active', 'cd-running'));
   const activeBtn = [...btns].find(b => b.textContent === minutes + 'm');
   if (activeBtn) activeBtn.classList.add('cd-running');
   updateCdDisplay();
   cdInterval = setInterval(() => {
     cdRemaining--;
-    if (cdRemaining <= 0) { cdRemaining = 0; clearInterval(cdInterval); cdInterval = null;
-      updateCdDisplay(); cdDone(); return; }
+    if (cdRemaining <= 0) { cdRemaining = 0; clearInterval(cdInterval); cdInterval = null; updateCdDisplay(); cdDone(); return; }
     updateCdDisplay();
   }, 1000);
 }
@@ -687,7 +701,6 @@ function updateCdDisplay() {
   el.textContent = `${m}:${String(s).padStart(2, '0')}`;
   const pct = cdTotalSec > 0 ? (cdRemaining / cdTotalSec * 100) : 100;
   fill.style.width = pct + '%';
-  // Warning at 1 min
   el.classList.remove('cd-warn', 'cd-done');
   fill.classList.remove('cd-warn-fill', 'cd-done-fill');
   if (cdRemaining <= 0) { el.classList.add('cd-done'); fill.classList.add('cd-done-fill'); }
@@ -695,11 +708,8 @@ function updateCdDisplay() {
 }
 
 function cdDone() {
-  const el = document.getElementById('cdDisplay');
-  el.textContent = '0:00 ✓';
-  const btns = document.querySelectorAll('.cd-btn');
-  btns.forEach(b => { b.classList.remove('cd-running'); b.classList.add('cd-active'); });
-  // Subtle audio notification using Web Audio API
+  document.getElementById('cdDisplay').textContent = '0:00 ✓';
+  document.querySelectorAll('.cd-btn').forEach(b => { b.classList.remove('cd-running'); b.classList.add('cd-active'); });
   try {
     const ctx = new AudioContext();
     [0, 200, 400].forEach(delay => {
