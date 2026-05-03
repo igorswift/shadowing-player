@@ -152,28 +152,11 @@
   .cd-progress-fill.cd-warn-fill { background: var(--orange); }
   .cd-progress-fill.cd-done-fill { background: var(--red); }
 
-  /* Prompter */
-  .prompter-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 200; flex-direction: column; }
-  .prompter-overlay.open { display: flex; }
-  .prompter-header { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; flex-shrink: 0; }
-  .prompter-header-left { display: flex; align-items: center; gap: 12px; }
-  .prompter-time { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); }
-  .prompter-close { padding: 8px 16px; border: 1px solid var(--text-muted); border-radius: 20px; background: transparent; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
-  .prompter-close:hover { border-color: var(--accent); color: var(--accent); }
-  .prompter-mirror-btn { padding: 8px 12px; border: 1px solid var(--text-muted); border-radius: 20px; background: transparent; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
-  .prompter-mirror-btn.active { border-color: var(--accent); color: var(--accent); }
-  .prompter-play-btn { padding: 8px 16px; border: 1px solid var(--accent); border-radius: 20px; background: var(--accent-dim); color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
-  .prompter-body { flex: 1; overflow: hidden; position: relative; }
-  .prompter-scroll { position: absolute; top: 0; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 40vh 24px 60vh; scroll-behavior: auto; -ms-overflow-style: none; scrollbar-width: none; }
-  .prompter-scroll::-webkit-scrollbar { display: none; }
-  .prompter-scroll.mirrored { transform: scaleX(-1); }
-  .prompter-line { font-family: 'DM Sans', sans-serif; font-size: 32px; font-weight: 500; line-height: 1.5; color: var(--text-muted); padding: 12px 0; transition: color 0.3s, opacity 0.3s; cursor: pointer; }
-  .prompter-line.active { color: var(--text); font-size: 36px; }
-  .prompter-line.done { color: var(--text-muted); opacity: 0.3; }
-  .prompter-line .prompter-translation { display: block; font-size: 20px; font-style: italic; color: var(--text-dim); margin-top: 4px; font-weight: 400; }
-  .prompter-line.active .prompter-translation { color: var(--text-muted); }
-  .prompter-gradient-top { position: absolute; top: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to bottom, #000 0%, transparent 100%); pointer-events: none; z-index: 1; }
-  .prompter-gradient-bottom { position: absolute; bottom: 0; left: 0; right: 0; height: 120px; background: linear-gradient(to top, #000 0%, transparent 100%); pointer-events: none; z-index: 1; }
+  /* Mirror modes — applied to .player-screen */
+  .player-screen.mirror-1 { transform: scaleX(-1); }
+  .player-screen.mirror-2 { transform: scaleY(-1); }
+  .player-screen.mirror-3 { transform: scale(-1, -1); }
+  .player-screen.mirror-4 { transform: scaleX(-1) scaleY(-1) rotate(180deg); }
 </style>
 </head>
 <body>
@@ -222,7 +205,7 @@
     <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
-    <button class="tool-btn" id="prompterBtn" onclick="openPrompter()">Prompter</button>
+    <button class="tool-btn" id="mirrorBtn" onclick="cycleMirror()">Mirror</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -252,22 +235,6 @@
     <button class="ctrl-btn" id="ruBtn" onclick="toggleTranslation()"><span class="ctrl-icon">🇷🇺</span><span id="ruLabel">RU</span></button>
     <button class="ctrl-btn" id="splitBtn" onclick="handleSplit()"><span class="ctrl-icon">⛓</span><span id="splitLabel">Split</span></button>
     <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
-  </div>
-</div>
-
-<div class="prompter-overlay" id="prompterOverlay">
-  <div class="prompter-header">
-    <div class="prompter-header-left">
-      <button class="prompter-play-btn" id="prompterPlayBtn" onclick="prompterTogglePlay()">▶ Play</button>
-      <button class="prompter-mirror-btn" id="prompterMirrorBtn" onclick="prompterToggleMirror()">Mirror</button>
-      <span class="prompter-time" id="prompterTime">0:00</span>
-    </div>
-    <button class="prompter-close" onclick="closePrompter()">✕ Close</button>
-  </div>
-  <div class="prompter-body">
-    <div class="prompter-gradient-top"></div>
-    <div class="prompter-scroll" id="prompterScroll"></div>
-    <div class="prompter-gradient-bottom"></div>
   </div>
 </div>
 
@@ -847,94 +814,22 @@ function clearCountdown() {
   document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-running'));
 }
 
-// --- PROMPTER ---
-let prompterActive = false, prompterMirrored = false, prompterRAF = null;
+// --- MIRROR ---
+let mirrorMode = 0; // 0=off, 1-4=variants
 
-function openPrompter() {
-  if (!sentences.length) return;
-  prompterActive = true;
-  // Pause main player
-  if (video && !video.paused) video.pause();
-  // Build all phrases
-  const scroll = document.getElementById('prompterScroll');
-  scroll.innerHTML = sentences.map((s, i) => {
-    let html = `<div class="prompter-line" data-idx="${i}" onclick="prompterJumpTo(${i})">${s.text}`;
-    if (s.translation && translationVisible) html += `<span class="prompter-translation">${s.translation}</span>`;
-    html += `</div>`;
-    return html;
-  }).join('');
-  document.getElementById('prompterOverlay').classList.add('open');
-  // Disable auto-pause for continuous playback
-  autoPauseEnabled = false;
-  // Start tracking
-  prompterRAF = requestAnimationFrame(prompterTick);
-  prompterUpdateTime();
-}
-
-function closePrompter() {
-  prompterActive = false;
-  if (video && !video.paused) video.pause();
-  document.getElementById('prompterOverlay').classList.remove('open');
-  autoPauseEnabled = true;
-  if (prompterRAF) cancelAnimationFrame(prompterRAF);
-  // Sync back to current phrase
-  showPhrase(currentIndex);
-}
-
-function prompterTogglePlay() {
-  if (!video) return;
-  if (video.paused) {
-    video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-    document.getElementById('prompterPlayBtn').textContent = '⏸ Pause';
+function cycleMirror() {
+  const player = document.getElementById('player');
+  const btn = document.getElementById('mirrorBtn');
+  player.classList.remove('mirror-1', 'mirror-2', 'mirror-3', 'mirror-4');
+  mirrorMode = (mirrorMode + 1) % 5;
+  if (mirrorMode > 0) {
+    player.classList.add('mirror-' + mirrorMode);
+    btn.textContent = 'Mirror ' + mirrorMode;
+    btn.classList.add('active');
   } else {
-    video.pause();
-    document.getElementById('prompterPlayBtn').textContent = '▶ Play';
+    btn.textContent = 'Mirror';
+    btn.classList.remove('active');
   }
-}
-
-function prompterToggleMirror() {
-  prompterMirrored = !prompterMirrored;
-  document.getElementById('prompterScroll').classList.toggle('mirrored', prompterMirrored);
-  document.getElementById('prompterMirrorBtn').classList.toggle('active', prompterMirrored);
-}
-
-function prompterJumpTo(idx) {
-  if (!video || !sentences[idx]) return;
-  video.currentTime = sentences[idx].start;
-  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-  document.getElementById('prompterPlayBtn').textContent = '⏸ Pause';
-}
-
-function prompterTick() {
-  if (!prompterActive) return;
-  if (video && !video.paused) {
-    const ct = video.currentTime;
-    // Find current phrase
-    let activeIdx = 0;
-    for (let i = 0; i < sentences.length; i++) {
-      if (ct >= sentences[i].start) activeIdx = i;
-    }
-    // Update highlights
-    const lines = document.querySelectorAll('#prompterScroll .prompter-line');
-    lines.forEach((el, i) => {
-      el.classList.toggle('active', i === activeIdx);
-      el.classList.toggle('done', i < activeIdx);
-    });
-    // Auto-scroll active line to center
-    if (lines[activeIdx] && activeIdx !== currentIndex) {
-      currentIndex = activeIdx;
-      lines[activeIdx].scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    prompterUpdateTime();
-  }
-  prompterRAF = requestAnimationFrame(prompterTick);
-}
-
-function prompterUpdateTime() {
-  if (!video) return;
-  const ct = video.currentTime;
-  const m = Math.floor(ct / 60), s = Math.floor(ct % 60);
-  document.getElementById('prompterTime').textContent = `${m}:${String(s).padStart(2, '0')}`;
 }
 
 window.addEventListener('beforeunload', () => {
@@ -945,11 +840,6 @@ window.addEventListener('beforeunload', () => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && video && !video.paused) video.pause(); });
 
 document.addEventListener('keydown', (e) => {
-  if (prompterActive) {
-    if (e.key === 'Escape') closePrompter();
-    else if (e.key === ' ') { e.preventDefault(); prompterTogglePlay(); }
-    return;
-  }
   if (document.getElementById('historyPanel').classList.contains('open')) { if (e.key === 'Escape') closeHistory(); return; }
   if (!document.getElementById('player').classList.contains('active')) return;
   switch(e.key) {
@@ -964,7 +854,7 @@ document.addEventListener('keydown', (e) => {
     case 'w': handleShadow(); break;
     case 'f': handleSplit(); break;
     case 't': if (hasTranslations) toggleTranslation(); break;
-    case 'p': openPrompter(); break;
+    case 'p': cycleMirror(); break;
   }
 });
 </script>
