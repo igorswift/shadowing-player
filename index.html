@@ -113,16 +113,11 @@
   .progress-bar { height: 3px; background: var(--surface2); flex-shrink: 0; }
   .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
 
-  .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; justify-content: center; }
+  .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow: hidden; }
   .phrase-counter { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
-  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; transition: opacity 0.2s; }
+  .phrase-text { font-size: 22px; font-weight: 500; line-height: 1.5; flex: 1; display: flex; align-items: center; transition: opacity 0.2s; }
   .phrase-text.dimmed { opacity: 0.15; }
   .phrase-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
-
-  .word { cursor: pointer; transition: color 0.15s; }
-  .word:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
-  .split-next { font-size: 22px; font-weight: 500; line-height: 1.5; color: var(--text); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
-  .split-next .word:hover { color: var(--accent); }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
   .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
@@ -134,19 +129,6 @@
 
   @media (min-width: 768px) { .player-screen { max-width: 480px; margin: 0 auto; } .phrase-text { font-size: 26px; } }
   input[type="file"] { display: none; }
-
-  .countdown-bar { display: flex; align-items: center; gap: 8px; padding: 6px 16px; flex-shrink: 0; }
-  .countdown-presets { display: flex; gap: 4px; }
-  .cd-btn { padding: 5px 10px; border: 1px solid var(--text-muted); border-radius: 14px; background: transparent; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; }
-  .cd-btn:active { transform: scale(0.95); }
-  .cd-btn.cd-running { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-  .cd-display { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); font-weight: 500; min-width: 50px; }
-  .cd-display.cd-warn { color: var(--orange); }
-  .cd-display.cd-done { color: var(--red); animation: pulse-rec 1s infinite; }
-  .cd-progress { flex: 1; height: 4px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
-  .cd-progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.5s linear; }
-  .cd-progress-fill.cd-warn-fill { background: var(--orange); }
-  .cd-progress-fill.cd-done-fill { background: var(--red); }
 </style>
 </head>
 <body>
@@ -155,9 +137,10 @@
   <h1>Shadowing Player</h1>
   <p>Load a video file and a transcript JSON to start practicing.</p>
   <div class="file-btn" id="videoPicker" onclick="document.getElementById('videoInput').click()">
-    <span class="icon">🎬</span><span class="label">Video file</span><span class="status" id="videoStatus">tap to select .mp4</span>
+    <span class="icon">🎬</span><span class="label">Video / Audio file</span>
+    <span class="status" id="videoStatus">tap to select .mp4 .mp3 .wav</span>
   </div>
-  <input type="file" id="videoInput" accept="video/*">
+  <input type="file" id="videoInput" accept="video/*,audio/*,.mp3,.wav,.m4a,.mp4,.mov,.webm">
   <div class="file-btn" id="jsonPicker" onclick="document.getElementById('jsonInput').click()">
     <span class="icon">📝</span><span class="label">Transcript JSON</span><span class="status" id="jsonStatus">tap to select .json</span>
   </div>
@@ -197,21 +180,11 @@
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
-  <div class="countdown-bar">
-    <div class="countdown-presets">
-      <button class="cd-btn" onclick="toggleCountdown(10)">10m</button>
-      <button class="cd-btn" onclick="toggleCountdown(15)">15m</button>
-      <button class="cd-btn" onclick="toggleCountdown(20)">20m</button>
-    </div>
-    <span class="cd-display" id="cdDisplay"></span>
-    <div class="cd-progress"><div class="cd-progress-fill" id="cdFill" style="width:0%"></div></div>
-  </div>
   <div class="takes-area" id="takesArea"></div>
   <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
   <div class="phrase-area">
     <div class="phrase-counter" id="phraseCounter">1 / 189</div>
     <div class="phrase-text" id="phraseText">Loading...</div>
-    <div class="split-next" id="splitNext" style="display:none"></div>
     <div class="phrase-time" id="phraseTime">00:00</div>
   </div>
   <div class="controls">
@@ -219,7 +192,6 @@
     <button class="ctrl-btn" onclick="replayPhrase()"><span class="ctrl-icon">🔄</span>Replay</button>
     <button class="ctrl-btn" onclick="togglePause()"><span class="ctrl-icon" id="pauseIcon">⏸</span><span id="pauseLabel">Pause</span></button>
     <button class="ctrl-btn" onclick="toggleText()"><span class="ctrl-icon">👁</span><span id="toggleLabel">Hide</span></button>
-    <button class="ctrl-btn" id="splitBtn" onclick="handleSplit()"><span class="ctrl-icon">⛓</span><span id="splitLabel">Split</span></button>
     <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
   </div>
 </div>
@@ -236,10 +208,10 @@ function formatDate(key) {
 }
 function loadStats() { try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; } catch { return {}; } }
 function saveStats(s) { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
-function getTodayStats() { const s = loadStats(); return s[todayKey()] || { minutes: 0, seconds: 0, phrases: 0, recs: 0 }; }
+function getTodayStats() { const s = loadStats(); return s[todayKey()] || { minutes: 0, phrases: 0, recs: 0 }; }
 function updateTodayStats(u) {
   const s = loadStats(), k = todayKey();
-  if (!s[k]) s[k] = { minutes: 0, seconds: 0, phrases: 0, recs: 0 };
+  if (!s[k]) s[k] = { minutes: 0, phrases: 0, recs: 0 };
   Object.assign(s[k], u);
   saveStats(s);
 }
@@ -252,7 +224,7 @@ function openHistory() {
 
   // Update today's stats before showing
   const sec = getSessionSeconds();
-  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 
   if (days.length === 0) {
     list.innerHTML = '<div class="history-empty">No practice sessions yet.</div>';
@@ -318,17 +290,12 @@ function startSessionTimer() {
   sessionPhrasesVisited = new Set();
   sessionRecCount = 0;
 
+  // Show today's date
   document.getElementById('sessionDate').textContent = formatDate(todayKey());
 
-  // Load existing today stats — use seconds if available, fall back to minutes
+  // Load existing today stats to continue accumulating
   const existing = getTodayStats();
-  let prevSec = existing.seconds || 0;
-  // Sanity: if no seconds field and minutes is absurd (>1440 = 24h), reset today
-  if (!existing.seconds && existing.minutes > 1440) { prevSec = 0; updateTodayStats({ minutes: 0, seconds: 0, phrases: 0, recs: 0 }); }
-  else if (!existing.seconds && existing.minutes > 0) { prevSec = existing.minutes * 60; }
-  // Cap at 24h max per day
-  if (prevSec > 86400) prevSec = 0;
-  sessionElapsed = prevSec * 1000;
+  sessionElapsed = existing.minutes * 60 * 1000;
   sessionStartTime = Date.now();
 
   updateSessionUI();
@@ -343,7 +310,7 @@ function updateSessionUI() {
   document.getElementById('sessionTimer').textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   document.getElementById('sessionPhrases').textContent = sessionPhrasesVisited.size;
   document.getElementById('sessionRecs').textContent = sessionRecCount;
-  if (sec % 10 === 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec % 10 === 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 }
 
 function trackPhrase(idx) { sessionPhrasesVisited.add(idx); }
@@ -354,7 +321,6 @@ let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, vide
 let autoPauseEnabled = true, isPausedByUser = false;
 const speeds = [0.75, 1]; let speedIndex = 1;
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
-let splitMode = false, splitEndTime = 0;
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
@@ -382,20 +348,14 @@ document.getElementById('jsonInput').addEventListener('change', (e) => {
 function parseTranscript(data) {
   const res = [];
   for (const seg of data.segments) {
-    let wordTimings = [], start = null;
+    let words = [], start = null;
     for (const w of seg.words) {
       if (w.type !== 'word') continue;
       if (start === null) start = w.start;
-      wordTimings.push({ text: w.text, start: w.start, end: w.start + w.duration });
-      if (w.eos) {
-        res.push({ start, end: w.start + w.duration, text: wordTimings.map(wt => wt.text).join(' '), words: wordTimings });
-        wordTimings = []; start = null;
-      }
+      words.push(w.text);
+      if (w.eos) { res.push({ start, end: w.start + w.duration, text: words.join(' ') }); words = []; start = null; }
     }
-    if (wordTimings.length) {
-      const lw = seg.words[seg.words.length-1];
-      res.push({ start, end: lw.start + lw.duration, text: wordTimings.map(wt => wt.text).join(' '), words: wordTimings });
-    }
+    if (words.length) { const lw = seg.words[seg.words.length-1]; res.push({ start, end: lw.start + lw.duration, text: words.join(' ') }); }
   }
   return res;
 }
@@ -413,10 +373,9 @@ function startPlayer() {
 
   function tick() {
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
-      const endTime = splitMode ? splitEndTime : sentences[currentIndex].end;
-      if (video.currentTime >= endTime - 0.12) {
+      const s = sentences[currentIndex];
+      if (video.currentTime >= s.end - 0.12) {
         video.pause();
-        if (splitMode) trackPhrase(currentIndex + 1);
         if (isRecording && shadowMode) stopRecording();
         else if (loopEnabled && loopCount < LOOP_MAX - 1) { loopCount++; setTimeout(() => playPhrase(currentIndex), 600); }
         else loopCount = 0;
@@ -440,22 +399,9 @@ function hideBadge() { document.getElementById('pauseBadge').className = 'pause-
 
 function showPhrase(idx) {
   const s = sentences[idx];
-  // Clear split mode
-  splitMode = false;
-  document.getElementById('splitNext').style.display = 'none';
-  document.getElementById('splitBtn').classList.remove('accent-btn');
-  document.getElementById('splitLabel').textContent = 'Split';
-
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
-  const phraseEl = document.getElementById('phraseText');
-  if (s.words && s.words.length) {
-    phraseEl.innerHTML = s.words.map((w, i) =>
-      `<span class="word" onclick="seekToWord(${i})">${w.text} </span>`
-    ).join('');
-  } else {
-    phraseEl.textContent = s.text;
-  }
-  phraseEl.classList.toggle('dimmed', !textVisible);
+  document.getElementById('phraseText').textContent = s.text;
+  document.getElementById('phraseText').classList.toggle('dimmed', !textVisible);
   const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
   document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
   document.getElementById('progressFill').style.width = ((idx+1)/sentences.length*100)+'%';
@@ -467,71 +413,9 @@ function playPhrase(idx) {
   video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
 }
 
-function nextPhrase() {
-  const skip = splitMode ? 2 : 1;
-  const next = currentIndex + skip;
-  if (next < sentences.length) { currentIndex = next; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
-}
-function prevPhrase() {
-  if (splitMode) { loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); return; }
-  if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
-}
+function nextPhrase() { if (currentIndex < sentences.length-1) { currentIndex++; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
+function prevPhrase() { if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); } }
 function replayPhrase() { loopCount=0; playPhrase(currentIndex); }
-
-function seekToWord(wordIdx) {
-  const s = sentences[currentIndex];
-  if (!s.words || !s.words[wordIdx]) return;
-  stopAllTakePlayback();
-  video.currentTime = s.words[wordIdx].start;
-  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-}
-
-function handleSplit() {
-  const nextIdx = currentIndex + 1;
-  if (nextIdx >= sentences.length) return;
-  const btn = document.getElementById('splitBtn');
-  // Toggle off
-  if (splitMode) {
-    splitMode = false; btn.classList.remove('accent-btn');
-    document.getElementById('splitLabel').textContent = 'Split';
-    document.getElementById('splitNext').style.display = 'none';
-    // Restore single phrase time
-    const s = sentences[currentIndex];
-    const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
-    document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
-    return;
-  }
-  // Activate split
-  splitMode = true;
-  splitEndTime = sentences[nextIdx].end;
-  btn.classList.add('accent-btn');
-  document.getElementById('splitLabel').textContent = 'Split';
-  // Show next phrase text below current
-  const splitEl = document.getElementById('splitNext');
-  const ns = sentences[nextIdx];
-  if (ns.words && ns.words.length) {
-    splitEl.innerHTML = ns.words.map((w, i) =>
-      `<span class="word" onclick="seekToWordSplit(${i})">${w.text} </span>`
-    ).join('');
-  } else {
-    splitEl.textContent = ns.text;
-  }
-  splitEl.style.display = '';
-  // Update time display to show combined range
-  const s = sentences[currentIndex];
-  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(ns.end/60), es = Math.floor(ns.end%60);
-  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
-  // Replay from current phrase start, will play through both
-  playPhrase(currentIndex);
-}
-
-function seekToWordSplit(wordIdx) {
-  const ns = sentences[currentIndex + 1];
-  if (!ns || !ns.words || !ns.words[wordIdx]) return;
-  stopAllTakePlayback();
-  video.currentTime = ns.words[wordIdx].start;
-  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
-}
 
 function togglePause() {
   if (!video) return;
@@ -709,66 +593,9 @@ function clearAllTakes() {
   document.getElementById('stopBtn').style.display = 'none'; document.getElementById('recTimer').style.display = 'none';
 }
 
-// --- COUNTDOWN TIMER ---
-let cdInterval = null, cdTotalSec = 0, cdRemaining = 0, cdActiveMinutes = 0;
-
-function toggleCountdown(minutes) {
-  const btns = document.querySelectorAll('.cd-btn');
-  if (cdInterval && cdActiveMinutes === minutes) { clearCountdown(); return; }
-  if (cdInterval) clearInterval(cdInterval);
-  cdActiveMinutes = minutes; cdTotalSec = minutes * 60; cdRemaining = cdTotalSec;
-  btns.forEach(b => b.classList.remove('cd-running'));
-  const activeBtn = [...btns].find(b => b.textContent === minutes + 'm');
-  if (activeBtn) activeBtn.classList.add('cd-running');
-  updateCdDisplay();
-  cdInterval = setInterval(() => {
-    cdRemaining--;
-    if (cdRemaining <= 0) { cdRemaining = 0; clearInterval(cdInterval); cdInterval = null; updateCdDisplay(); cdDone(); return; }
-    updateCdDisplay();
-  }, 1000);
-}
-
-function updateCdDisplay() {
-  const el = document.getElementById('cdDisplay');
-  const fill = document.getElementById('cdFill');
-  const m = Math.floor(cdRemaining / 60), s = cdRemaining % 60;
-  el.textContent = `${m}:${String(s).padStart(2, '0')}`;
-  const pct = cdTotalSec > 0 ? (cdRemaining / cdTotalSec * 100) : 0;
-  fill.style.width = pct + '%';
-  el.classList.remove('cd-warn', 'cd-done');
-  fill.classList.remove('cd-warn-fill', 'cd-done-fill');
-  if (cdRemaining <= 0) { el.classList.add('cd-done'); fill.classList.add('cd-done-fill'); }
-  else if (cdRemaining <= 60) { el.classList.add('cd-warn'); fill.classList.add('cd-warn-fill'); }
-}
-
-function cdDone() {
-  document.getElementById('cdDisplay').textContent = '0:00 ✓';
-  document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-running'));
-  try {
-    const ctx = new AudioContext();
-    [0, 200, 400].forEach(delay => {
-      const osc = ctx.createOscillator(); const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      osc.frequency.value = 880; gain.gain.value = 0.15;
-      osc.start(ctx.currentTime + delay / 1000);
-      osc.stop(ctx.currentTime + delay / 1000 + 0.15);
-    });
-  } catch {}
-}
-
-function clearCountdown() {
-  if (cdInterval) { clearInterval(cdInterval); cdInterval = null; }
-  cdActiveMinutes = 0; cdRemaining = 0; cdTotalSec = 0;
-  document.getElementById('cdDisplay').textContent = '';
-  document.getElementById('cdDisplay').classList.remove('cd-warn', 'cd-done');
-  document.getElementById('cdFill').style.width = '0%';
-  document.getElementById('cdFill').classList.remove('cd-warn-fill', 'cd-done-fill');
-  document.querySelectorAll('.cd-btn').forEach(b => b.classList.remove('cd-running'));
-}
-
 window.addEventListener('beforeunload', () => {
   const sec = getSessionSeconds();
-  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
+  if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 });
 
 document.addEventListener('visibilitychange', () => { if (document.hidden && video && !video.paused) video.pause(); });
@@ -786,7 +613,6 @@ document.addEventListener('keydown', (e) => {
     case 'l': toggleLoop(); break;
     case 'r': handleRec(); break;
     case 'w': handleShadow(); break;
-    case 'f': handleSplit(); break;
   }
 });
 </script>
