@@ -152,11 +152,8 @@
   .cd-progress-fill.cd-warn-fill { background: var(--orange); }
   .cd-progress-fill.cd-done-fill { background: var(--red); }
 
-  /* Mirror modes — applied to .player-screen */
-  .player-screen.mirror-1 { transform: scaleX(-1); }
-  .player-screen.mirror-2 { transform: scaleY(-1); }
-  .player-screen.mirror-3 { transform: scale(-1, -1); }
-  .player-screen.mirror-4 { transform: scaleX(-1) scaleY(-1) rotate(180deg); }
+  /* Mirror mode */
+  .player-screen.mirrored { transform: scaleY(-1); }
 </style>
 </head>
 <body>
@@ -205,7 +202,7 @@
     <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
-    <button class="tool-btn" id="mirrorBtn" onclick="cycleMirror()">Mirror</button>
+    <button class="tool-btn" id="mirrorBtn" onclick="toggleMirror()">Mirror</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -816,21 +813,12 @@ function clearCountdown() {
 }
 
 // --- MIRROR ---
-let mirrorMode = 0; // 0=off, 1-4=variants
-
-function cycleMirror() {
+function toggleMirror() {
   const player = document.getElementById('player');
   const btn = document.getElementById('mirrorBtn');
-  player.classList.remove('mirror-1', 'mirror-2', 'mirror-3', 'mirror-4');
-  mirrorMode = (mirrorMode + 1) % 5;
-  if (mirrorMode > 0) {
-    player.classList.add('mirror-' + mirrorMode);
-    btn.textContent = 'Mirror ' + mirrorMode;
-    btn.classList.add('active');
-  } else {
-    btn.textContent = 'Mirror';
-    btn.classList.remove('active');
-  }
+  const on = player.classList.toggle('mirrored');
+  btn.classList.toggle('active', on);
+  btn.textContent = on ? 'Mirror ✓' : 'Mirror';
 }
 
 window.addEventListener('beforeunload', () => {
@@ -865,7 +853,7 @@ document.addEventListener('keydown', (e) => {
     case 'w': handleShadow(); break;
     case 'f': handleSplit(); break;
     case 't': if (hasTranslations) toggleTranslation(); break;
-    case 'p': cycleMirror(); break;
+    case 'p': toggleMirror(); break;
   }
 });
 </script>
