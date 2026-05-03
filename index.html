@@ -442,6 +442,7 @@ function startPlayer() {
   }
   video.load();
   startSessionTimer();
+  requestWakeLock();
 
   function tick() {
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
@@ -837,7 +838,17 @@ window.addEventListener('beforeunload', () => {
   if (sec > 0) updateTodayStats({ minutes: Math.ceil(sec / 60), seconds: sec, phrases: sessionPhrasesVisited.size, recs: sessionRecCount });
 });
 
-document.addEventListener('visibilitychange', () => { if (document.hidden && video && !video.paused) video.pause(); });
+// --- WAKE LOCK ---
+let wakeLock = null;
+async function requestWakeLock() {
+  try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && video && !video.paused) video.pause();
+  // Re-acquire wake lock when tab becomes visible again
+  if (!document.hidden && document.getElementById('player').classList.contains('active')) requestWakeLock();
+});
 
 document.addEventListener('keydown', (e) => {
   if (document.getElementById('historyPanel').classList.contains('open')) { if (e.key === 'Escape') closeHistory(); return; }
