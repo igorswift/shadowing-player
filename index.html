@@ -129,7 +129,7 @@
   .phrase-translation { font-size: 16px; line-height: 1.5; color: var(--text-muted); margin-top: 8px; font-style: italic; }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
-  .ctrl-btn { flex: 1; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); }
+  .ctrl-btn { flex: 1; min-width: 0; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); white-space: nowrap; overflow: hidden; }
   .ctrl-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
   .ctrl-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-right: none; }
   .ctrl-btn:active { background: var(--surface2); transform: scale(0.95); }
@@ -576,6 +576,12 @@ function nextPhrase() {
   if (next < sentences.length) { currentIndex = next; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
 }
 function prevPhrase() {
+  if (splitLock && splitMode) {
+    // Go back by splitCount
+    const prev = currentIndex - splitCount;
+    if (prev >= 0) { currentIndex = prev; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
+    return;
+  }
   if (splitMode) { loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); return; }
   if (currentIndex > 0) { currentIndex--; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
 }
