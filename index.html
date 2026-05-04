@@ -367,7 +367,7 @@ function trackRec() { sessionRecCount++; }
 let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
 let autoPauseEnabled = true, isPausedByUser = false;
 const speeds = [0.75, 1]; let speedIndex = 1;
-const PAUSE_BUFFER = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ? 0.20 : 0.12;
+const PAUSE_BUFFER = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ? 0.22 : 0.12;
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
 let splitMode = false, splitEndTime = 0;
 let translationVisible = false, hasTranslations = false;
