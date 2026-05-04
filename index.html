@@ -206,6 +206,7 @@
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
     <button class="tool-btn" id="mirrorBtn" onclick="toggleMirror()">Mirror</button>
+    <button class="tool-btn" id="mergeBtn" onclick="toggleAutoMerge()">Merge</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -371,6 +372,7 @@ const PAUSE_BUFFER = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ?
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
 let splitMode = false, splitEndTime = 0;
 let translationVisible = false, hasTranslations = false;
+let autoMerge = false, rawSentences = [], rawJsonData = null;
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
@@ -387,7 +389,8 @@ document.getElementById('jsonInput').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = (ev) => {
-    try { sentences = parseTranscript(JSON.parse(ev.target.result));
+    try { rawJsonData = JSON.parse(ev.target.result);
+      sentences = parseTranscript(rawJsonData);
       document.getElementById('jsonStatus').textContent = `${sentences.length} phrases`;
       document.getElementById('jsonPicker').classList.add('loaded'); checkReady();
     } catch(err) { document.getElementById('jsonStatus').textContent = 'Error'; }
@@ -421,7 +424,53 @@ function parseTranscript(data) {
       res.push(phrase);
     }
   }
-  return res;
+  rawSentences = res;
+  return autoMerge ? mergeSentences(res) : res;
+}
+
+function mergeSentences(phrases) {
+  const THRESHOLD = 2.0, MAX_BLOCK = 8.0, MAX_GAP = 0.5;
+  const merged = [];
+  let i = 0;
+  while (i < phrases.length) {
+    const block = [phrases[i]];
+    let blockDur = phrases[i].end - phrases[i].start;
+    while (i + 1 < phrases.length &&
+      (phrases[i].end - phrases[i].start) < THRESHOLD &&
+      blockDur + (phrases[i+1].end - phrases[i+1].start) <= MAX_BLOCK &&
+      phrases[i+1].start - phrases[i].end <= MAX_GAP) {
+      i++;
+      block.push(phrases[i]);
+      blockDur += phrases[i].end - phrases[i].start;
+    }
+    if (block.length === 1) { merged.push(block[0]); }
+    else {
+      // Merge into one phrase
+      const allWords = block.flatMap(b => b.words);
+      const translations = block.map(b => b.translation).filter(Boolean);
+      merged.push({
+        start: block[0].start,
+        end: block[block.length-1].end,
+        text: block.map(b => b.text).join(' '),
+        words: allWords,
+        translation: translations.length ? translations.join(' ') : undefined,
+        mergedCount: block.length
+      });
+    }
+    i++;
+  }
+  return merged;
+}
+
+function toggleAutoMerge() {
+  if (!rawJsonData) return;
+  autoMerge = !autoMerge;
+  const btn = document.getElementById('mergeBtn');
+  btn.classList.toggle('active', autoMerge);
+  btn.textContent = autoMerge ? 'Merge ✓' : 'Merge';
+  sentences = autoMerge ? mergeSentences(rawSentences) : rawSentences.slice();
+  currentIndex = 0; showPhrase(currentIndex);
+  document.getElementById('phraseCounter').textContent = `1 / ${sentences.length}`;
 }
 
 function checkReady() { if (videoFile && sentences.length) document.getElementById('startBtn').classList.add('ready'); }
@@ -858,6 +907,7 @@ document.addEventListener('keydown', (e) => {
     case 'f': handleSplit(); break;
     case 't': if (hasTranslations) toggleTranslation(); break;
     case 'p': toggleMirror(); break;
+    case 'm': toggleAutoMerge(); break;
   }
 });
 </script>
