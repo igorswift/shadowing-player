@@ -367,6 +367,7 @@ function trackRec() { sessionRecCount++; }
 let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
 let autoPauseEnabled = true, isPausedByUser = false;
 const speeds = [0.75, 1]; let speedIndex = 1;
+const PAUSE_BUFFER = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ? 0.20 : 0.12;
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
 let splitMode = false, splitEndTime = 0;
 let translationVisible = false, hasTranslations = false;
@@ -447,7 +448,7 @@ function startPlayer() {
   function tick() {
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
       const endTime = splitMode ? splitEndTime : sentences[currentIndex].end;
-      if (video.currentTime >= endTime - 0.12) {
+      if (video.currentTime >= endTime - PAUSE_BUFFER) {
         video.pause();
         if (splitMode) trackPhrase(currentIndex + 1);
         if (isRecording && shadowMode) stopRecording();
@@ -630,7 +631,7 @@ async function startRecFlow() {
   const s = sentences[currentIndex];
   video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
   setBadge('LISTEN', 'visible');
-  function waitEnd() { if (video.currentTime >= s.end - 0.12) { video.pause(); doCountdown(2, false); return; } requestAnimationFrame(waitEnd); }
+  function waitEnd() { if (video.currentTime >= s.end - PAUSE_BUFFER) { video.pause(); doCountdown(2, false); return; } requestAnimationFrame(waitEnd); }
   requestAnimationFrame(waitEnd);
 }
 
