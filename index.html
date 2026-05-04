@@ -129,7 +129,7 @@
   .phrase-translation { font-size: 16px; line-height: 1.5; color: var(--text-muted); margin-top: 8px; font-style: italic; }
 
   .controls { display: flex; gap: 0; padding: 10px 16px 28px; flex-shrink: 0; }
-  .ctrl-btn { flex: 1; min-width: 0; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); white-space: nowrap; overflow: hidden; }
+  .ctrl-btn { flex: 1 1 0; padding: 14px 4px; border: none; background: var(--surface); color: var(--text); font-family: inherit; font-size: 11px; font-weight: 500; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.15s; border-right: 1px solid var(--bg); white-space: nowrap; overflow: hidden; }
   .ctrl-btn:first-child { border-radius: var(--radius) 0 0 var(--radius); }
   .ctrl-btn:last-child { border-radius: 0 var(--radius) var(--radius) 0; border-right: none; }
   .ctrl-btn:active { background: var(--surface2); transform: scale(0.95); }
@@ -537,8 +537,11 @@ function showPhrase(idx) {
   // Clear split mode
   splitMode = false;
   document.getElementById('splitNext').style.display = 'none';
-  document.getElementById('splitBtn').classList.remove('accent-btn');
-  document.getElementById('splitLabel').textContent = 'Split';
+  // Keep split label showing count if set, only remove accent when not locked
+  if (!splitLock) {
+    document.getElementById('splitBtn').classList.remove('accent-btn');
+  }
+  document.getElementById('splitLabel').textContent = splitCount > 0 ? 'Split: ' + splitCount : 'Split';
 
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
   const phraseEl = document.getElementById('phraseText');
