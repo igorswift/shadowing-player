@@ -206,7 +206,6 @@
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
     <button class="tool-btn" id="shadowBtn" onclick="handleShadow()">Shadow</button>
     <button class="tool-btn" id="mirrorBtn" onclick="toggleMirror()">Mirror</button>
-    <button class="tool-btn" id="mergeBtn" onclick="toggleAutoMerge()">Merge</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
   </div>
@@ -232,9 +231,9 @@
     <button class="ctrl-btn" onclick="prevPhrase()"><span class="ctrl-icon">⏮</span>Prev</button>
     <button class="ctrl-btn" onclick="replayPhrase()"><span class="ctrl-icon">🔄</span>Replay</button>
     <button class="ctrl-btn" onclick="togglePause()"><span class="ctrl-icon" id="pauseIcon">⏸</span><span id="pauseLabel">Pause</span></button>
-    <button class="ctrl-btn" onclick="toggleText()"><span class="ctrl-icon">👁</span><span id="toggleLabel">Hide</span></button>
     <button class="ctrl-btn" id="ruBtn" onclick="toggleTranslation()"><span class="ctrl-icon">🇷🇺</span><span id="ruLabel">RU</span></button>
-    <button class="ctrl-btn" id="splitBtn" onclick="handleSplit()"><span class="ctrl-icon">⛓</span><span id="splitLabel">Split</span></button>
+    <button class="ctrl-btn" id="splitBtn" onclick="cycleSplit()"><span class="ctrl-icon">⛓</span><span id="splitLabel">Split</span></button>
+    <button class="ctrl-btn" id="splitLockBtn" onclick="toggleSplitLock()"><span class="ctrl-icon">🔒</span><span id="splitLockLabel">Lock</span></button>
     <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
   </div>
 </div>
@@ -370,9 +369,8 @@ let autoPauseEnabled = true, isPausedByUser = false;
 const speeds = [0.75, 1]; let speedIndex = 1;
 const PAUSE_BUFFER = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ? 0.22 : 0.12;
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
-let splitMode = false, splitEndTime = 0;
+let splitMode = false, splitEndTime = 0, splitLock = false, splitCount = 0;
 let translationVisible = false, hasTranslations = false;
-let autoMerge = false, rawSentences = [], rawJsonData = null;
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
@@ -389,8 +387,7 @@ document.getElementById('jsonInput').addEventListener('change', (e) => {
   const f = e.target.files[0]; if (!f) return;
   const r = new FileReader();
   r.onload = (ev) => {
-    try { rawJsonData = JSON.parse(ev.target.result);
-      sentences = parseTranscript(rawJsonData);
+    try { sentences = parseTranscript(JSON.parse(ev.target.result));
       document.getElementById('jsonStatus').textContent = `${sentences.length} phrases`;
       document.getElementById('jsonPicker').classList.add('loaded'); checkReady();
     } catch(err) { document.getElementById('jsonStatus').textContent = 'Error'; }
@@ -424,53 +421,7 @@ function parseTranscript(data) {
       res.push(phrase);
     }
   }
-  rawSentences = res;
-  return autoMerge ? mergeSentences(res) : res;
-}
-
-function mergeSentences(phrases) {
-  const THRESHOLD = 2.0, MAX_BLOCK = 8.0, MAX_GAP = 0.5;
-  const merged = [];
-  let i = 0;
-  while (i < phrases.length) {
-    const block = [phrases[i]];
-    let blockDur = phrases[i].end - phrases[i].start;
-    while (i + 1 < phrases.length &&
-      (phrases[i].end - phrases[i].start) < THRESHOLD &&
-      blockDur + (phrases[i+1].end - phrases[i+1].start) <= MAX_BLOCK &&
-      phrases[i+1].start - phrases[i].end <= MAX_GAP) {
-      i++;
-      block.push(phrases[i]);
-      blockDur += phrases[i].end - phrases[i].start;
-    }
-    if (block.length === 1) { merged.push(block[0]); }
-    else {
-      // Merge into one phrase
-      const allWords = block.flatMap(b => b.words);
-      const translations = block.map(b => b.translation).filter(Boolean);
-      merged.push({
-        start: block[0].start,
-        end: block[block.length-1].end,
-        text: block.map(b => b.text).join(' '),
-        words: allWords,
-        translation: translations.length ? translations.join(' ') : undefined,
-        mergedCount: block.length
-      });
-    }
-    i++;
-  }
-  return merged;
-}
-
-function toggleAutoMerge() {
-  if (!rawJsonData) return;
-  autoMerge = !autoMerge;
-  const btn = document.getElementById('mergeBtn');
-  btn.classList.toggle('active', autoMerge);
-  btn.textContent = autoMerge ? 'Merge ✓' : 'Merge';
-  sentences = autoMerge ? mergeSentences(rawSentences) : rawSentences.slice();
-  currentIndex = 0; showPhrase(currentIndex);
-  document.getElementById('phraseCounter').textContent = `1 / ${sentences.length}`;
+  return res;
 }
 
 function checkReady() { if (videoFile && sentences.length) document.getElementById('startBtn').classList.add('ready'); }
@@ -499,7 +450,10 @@ function startPlayer() {
       const endTime = splitMode ? splitEndTime : sentences[currentIndex].end;
       if (video.currentTime >= endTime - PAUSE_BUFFER) {
         video.pause();
-        if (splitMode) trackPhrase(currentIndex + 1);
+        if (splitMode) {
+          const lastIdx = Math.min(currentIndex + (splitCount || 2) - 1, sentences.length - 1);
+          for (let i = currentIndex + 1; i <= lastIdx; i++) trackPhrase(i);
+        }
         if (isRecording && shadowMode) stopRecording();
         else if (loopEnabled && loopCount < LOOP_MAX - 1) { loopCount++; setTimeout(() => playPhrase(currentIndex), 600); }
         else loopCount = 0;
@@ -550,6 +504,11 @@ function showPhrase(idx) {
   document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
   document.getElementById('progressFill').style.width = ((idx+1)/sentences.length*100)+'%';
   clearAllTakes(); trackPhrase(idx);
+
+  // Auto-activate split if lock is on
+  if (splitLock && splitCount > 0 && idx + 1 < sentences.length) {
+    activateSplit();
+  }
 }
 
 function playPhrase(idx) {
@@ -558,7 +517,7 @@ function playPhrase(idx) {
 }
 
 function nextPhrase() {
-  const skip = splitMode ? 2 : 1;
+  const skip = splitMode ? splitCount : 1;
   const next = currentIndex + skip;
   if (next < sentences.length) { currentIndex = next; loopCount=0; showPhrase(currentIndex); playPhrase(currentIndex); }
 }
@@ -576,47 +535,100 @@ function seekToWord(wordIdx) {
   video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
 }
 
-function handleSplit() {
-  const nextIdx = currentIndex + 1;
-  if (nextIdx >= sentences.length) return;
-  const btn = document.getElementById('splitBtn');
-  // Toggle off
-  if (splitMode) {
-    splitMode = false; btn.classList.remove('accent-btn');
-    document.getElementById('splitLabel').textContent = 'Split';
-    document.getElementById('splitNext').style.display = 'none';
-    // Restore single phrase time
-    const s = sentences[currentIndex];
-    const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
-    document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
-    return;
-  }
-  // Activate split
-  splitMode = true;
-  splitEndTime = sentences[nextIdx].end;
-  btn.classList.add('accent-btn');
-  document.getElementById('splitLabel').textContent = 'Split';
-  // Show next phrase text below current
-  const splitEl = document.getElementById('splitNext');
-  const ns = sentences[nextIdx];
-  if (ns.words && ns.words.length) {
-    splitEl.innerHTML = ns.words.map((w, i) =>
-      `<span class="word" onclick="seekToWordSplit(${i})">${w.text} </span>`
-    ).join('');
+function cycleSplit() {
+  // Cycle: 0 (off) -> 2 -> 3 -> 0
+  if (splitCount === 0) { splitCount = 2; }
+  else if (splitCount === 2) { splitCount = 3; }
+  else { splitCount = 0; }
+  updateSplitUI();
+  if (splitCount > 0 && currentIndex + 1 < sentences.length) {
+    activateSplit();
+    playPhrase(currentIndex);
   } else {
-    splitEl.textContent = ns.text;
+    deactivateSplit();
   }
-  splitEl.style.display = '';
-  // Update time display to show combined range
-  const s = sentences[currentIndex];
-  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(ns.end/60), es = Math.floor(ns.end%60);
-  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
-  // Replay from current phrase start, will play through both
-  playPhrase(currentIndex);
 }
 
-function seekToWordSplit(wordIdx) {
-  const ns = sentences[currentIndex + 1];
+function updateSplitUI() {
+  const btn = document.getElementById('splitBtn');
+  const label = document.getElementById('splitLabel');
+  if (splitCount === 0) {
+    label.textContent = 'Split';
+    btn.classList.remove('accent-btn');
+  } else {
+    label.textContent = 'Split: ' + splitCount;
+    btn.classList.add('accent-btn');
+  }
+}
+
+function activateSplit() {
+  const count = splitCount || 2;
+  const lastIdx = Math.min(currentIndex + count - 1, sentences.length - 1);
+  if (lastIdx <= currentIndex) return;
+  splitMode = true;
+  splitEndTime = sentences[lastIdx].end;
+  document.getElementById('splitBtn').classList.add('accent-btn');
+
+  // Build split-next content for phrases 2..N
+  const splitEl = document.getElementById('splitNext');
+  let html = '';
+  for (let i = currentIndex + 1; i <= lastIdx; i++) {
+    if (i > currentIndex + 1) html += '<div style="border-top:1px solid var(--surface2); margin:8px 0;"></div>';
+    const ns = sentences[i];
+    if (ns.words && ns.words.length) {
+      html += ns.words.map((w, wi) =>
+        `<span class="word" onclick="seekToWordN(${i},${wi})">${w.text} </span>`
+      ).join('');
+    } else {
+      html += ns.text;
+    }
+  }
+  splitEl.innerHTML = html;
+  splitEl.style.display = '';
+
+  // Translations
+  if (translationVisible) {
+    const transEl = document.getElementById('phraseTranslation');
+    const allTrans = [];
+    for (let i = currentIndex; i <= lastIdx; i++) {
+      if (sentences[i].translation) allTrans.push(sentences[i].translation);
+    }
+    if (allTrans.length) { transEl.textContent = allTrans.join(' // '); transEl.style.display = ''; }
+  }
+
+  // Time range
+  const s = sentences[currentIndex], e = sentences[lastIdx];
+  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(e.end/60), es = Math.floor(e.end%60);
+  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
+}
+
+function deactivateSplit() {
+  splitMode = false;
+  document.getElementById('splitNext').style.display = 'none';
+  if (splitCount === 0) document.getElementById('splitBtn').classList.remove('accent-btn');
+  const s = sentences[currentIndex];
+  const sm = Math.floor(s.start/60), ss = Math.floor(s.start%60), em = Math.floor(s.end/60), es = Math.floor(s.end%60);
+  document.getElementById('phraseTime').textContent = `${sm}:${String(ss).padStart(2,'0')} → ${em}:${String(es).padStart(2,'0')}`;
+}
+
+function toggleSplitLock() {
+  splitLock = !splitLock;
+  const btn = document.getElementById('splitLockBtn');
+  btn.classList.toggle('accent-btn', splitLock);
+  document.getElementById('splitLockLabel').textContent = splitLock ? 'Lock ✓' : 'Lock';
+  // If locking with no split count set, default to 2
+  if (splitLock && splitCount === 0) { splitCount = 2; updateSplitUI(); }
+  if (splitLock && !splitMode && currentIndex + 1 < sentences.length) {
+    activateSplit();
+    playPhrase(currentIndex);
+  }
+  if (!splitLock && splitMode) {
+    deactivateSplit();
+  }
+}
+
+function seekToWordN(phraseIdx, wordIdx) {
+  const ns = sentences[phraseIdx];
   if (!ns || !ns.words || !ns.words[wordIdx]) return;
   stopAllTakePlayback();
   video.currentTime = ns.words[wordIdx].start;
@@ -904,10 +916,9 @@ document.addEventListener('keydown', (e) => {
     case 'l': toggleLoop(); break;
     case 'r': handleRec(); break;
     case 'w': handleShadow(); break;
-    case 'f': handleSplit(); break;
+    case 'f': cycleSplit(); break;
     case 't': if (hasTranslations) toggleTranslation(); break;
     case 'p': toggleMirror(); break;
-    case 'm': toggleAutoMerge(); break;
   }
 });
 </script>
