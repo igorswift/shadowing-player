@@ -372,7 +372,8 @@ function trackRec() { sessionRecCount++; }
 // ===== PLAYER =====
 let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
 let autoPauseEnabled = true, isPausedByUser = false;
-const speeds = [0.75, 1]; let speedIndex = 1;
+const speeds = [0.5, 0.75, 1]; let speedIndex = 2;
+const accentedWords = {}; // key: "phraseIdx-wordIdx", stores toggled uppercase words
 const BUFFER_OPTIONS = [0.12, 0.18, 0.22, 0.28, 0.35];
 let bufferIndex = (navigator.maxTouchPoints > 0 || window.innerWidth < 768) ? 2 : 0;
 let PAUSE_BUFFER = BUFFER_OPTIONS[bufferIndex];
@@ -555,9 +556,11 @@ function showPhrase(idx) {
   document.getElementById('phraseCounter').textContent = `${idx + 1} / ${sentences.length}`;
   const phraseEl = document.getElementById('phraseText');
   if (s.words && s.words.length) {
-    phraseEl.innerHTML = s.words.map((w, i) =>
-      `<span class="word" onclick="seekToWord(${i})">${w.text} </span>`
-    ).join('');
+    phraseEl.innerHTML = s.words.map((w, i) => {
+      const key = idx + '-' + i;
+      const text = accentedWords[key] ? w.text.toUpperCase() : w.text;
+      return `<span class="word" onclick="seekToWord(${i})" oncontextmenu="toggleAccent(event,${idx},${i})">${text} </span>`;
+    }).join('');
   } else {
     phraseEl.textContent = s.text;
   }
@@ -648,9 +651,11 @@ function activateSplit() {
     if (i > currentIndex + 1) html += '<div style="border-top:1px solid var(--surface2); margin:8px 0;"></div>';
     const ns = sentences[i];
     if (ns.words && ns.words.length) {
-      html += ns.words.map((w, wi) =>
-        `<span class="word" onclick="seekToWordN(${i},${wi})">${w.text} </span>`
-      ).join('');
+      html += ns.words.map((w, wi) => {
+        const key = i + '-' + wi;
+        const text = accentedWords[key] ? w.text.toUpperCase() : w.text;
+        return `<span class="word" onclick="seekToWordN(${i},${wi})" oncontextmenu="toggleAccent(event,${i},${wi})">${text} </span>`;
+      }).join('');
     } else {
       html += ns.text;
     }
@@ -707,6 +712,16 @@ function seekToWordN(phraseIdx, wordIdx) {
   stopAllTakePlayback();
   video.currentTime = ns.words[wordIdx].start;
   video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+}
+
+function toggleAccent(e, phraseIdx, wordIdx) {
+  e.preventDefault();
+  const key = phraseIdx + '-' + wordIdx;
+  if (accentedWords[key]) delete accentedWords[key];
+  else accentedWords[key] = true;
+  // Re-render current view
+  showPhrase(currentIndex);
+  if (splitMode) activateSplit();
 }
 
 function togglePause() {
