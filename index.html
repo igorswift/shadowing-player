@@ -496,9 +496,11 @@ function mergeSentences(phrases) {
 function toggleAutoMerge() {
   if (!rawSentences.length) return;
   autoMerge = !autoMerge;
-  const btn = document.getElementById('mergeBtn');
-  btn.classList.toggle('active', autoMerge);
-  btn.textContent = autoMerge ? 'Merge ✓' : 'Merge';
+  // Update both merge buttons (practice + record)
+  ['mergeBtn', 'mergeBtn2'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.classList.toggle('active', autoMerge); btn.textContent = autoMerge ? 'Merge ✓' : 'Merge'; }
+  });
   // Find current timestamp to restore position
   const curTime = sentences[currentIndex] ? sentences[currentIndex].start : 0;
   sentences = autoMerge ? mergeSentences(rawSentences) : rawSentences.slice();
@@ -1044,10 +1046,11 @@ function seekProgress(e) {
 // --- MIRROR ---
 function toggleMirror() {
   const player = document.getElementById('player');
-  const btn = document.getElementById('mirrorBtn');
   const on = player.classList.toggle('mirrored');
-  btn.classList.toggle('active', on);
-  btn.textContent = on ? 'Mirror ✓' : 'Mirror';
+  ['mirrorBtn', 'mirrorBtn2'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) { btn.classList.toggle('active', on); btn.textContent = on ? 'Mirror ✓' : 'Mirror'; }
+  });
 }
 
 window.addEventListener('beforeunload', () => {
