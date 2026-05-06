@@ -30,6 +30,18 @@
   .start-btn { width: 100%; max-width: 320px; padding: 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; opacity: 0.3; pointer-events: none; }
   .start-btn.ready { opacity: 1; pointer-events: auto; } .start-btn:active { transform: scale(0.97); }
 
+  /* Mode selector */
+  .mode-selector { display: flex; gap: 0; width: 100%; max-width: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--text-muted); }
+  .mode-btn { flex: 1; padding: 12px; border: none; background: var(--surface); color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; }
+  .mode-btn:first-child { border-right: 1px solid var(--text-muted); }
+  .mode-btn.selected { background: var(--accent-dim); color: var(--accent); }
+
+  /* Record toolbar speed slider */
+  .speed-slider-wrap { display: flex; align-items: center; gap: 8px; padding: 0 8px; }
+  .speed-slider { -webkit-appearance: none; appearance: none; width: 100px; height: 4px; background: var(--surface2); border-radius: 2px; outline: none; }
+  .speed-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: var(--accent); border-radius: 50%; cursor: pointer; }
+  .speed-label { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); min-width: 36px; }
+
   /* History panel */
   .history-panel { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 100; flex-direction: column; padding: 20px 16px; overflow-y: auto; }
   .history-panel.open { display: flex; }
@@ -113,8 +125,8 @@
   .take-mix-btn:active { background: var(--purple-dim); }
   .take-mix-btn.playing { background: var(--purple-dim); }
 
-  .progress-bar { height: 3px; background: var(--surface2); flex-shrink: 0; }
-  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; }
+  .progress-bar { height: 6px; background: var(--surface2); flex-shrink: 0; cursor: pointer; }
+  .progress-fill { height: 100%; background: var(--accent); width: 0%; transition: width 0.3s; pointer-events: none; }
 
   .phrase-area { flex: 1; display: flex; flex-direction: column; padding: 12px 16px; overflow-y: auto; min-height: 0; }
   .phrase-area::before { content: ''; flex: 1; }
@@ -176,6 +188,10 @@
     <span class="icon">📝</span><span class="label">Transcript JSON</span><span class="status" id="jsonStatus">tap to select .json</span>
   </div>
   <input type="file" id="jsonInput" accept=".json">
+  <div class="mode-selector">
+    <button class="mode-btn selected" id="modePractice" onclick="selectMode('practice')">🎧 Practice</button>
+    <button class="mode-btn" id="modeRecord" onclick="selectMode('record')">🎬 Record</button>
+  </div>
   <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
 </div>
 
@@ -204,7 +220,7 @@
     <span class="audio-label" style="display:none"></span>
     <div class="pause-badge" id="pauseBadge">YOUR TURN</div>
   </div>
-  <div class="toolbar">
+  <div class="toolbar" id="toolbarPractice">
     <button class="tool-btn active" id="speedBtn" onclick="cycleSpeed()">1x</button>
     <button class="tool-btn" id="loopBtn" onclick="toggleLoop()">Loop: off</button>
     <button class="tool-btn" id="recBtn" onclick="handleRec()">Rec</button>
@@ -213,6 +229,14 @@
     <button class="tool-btn" id="mergeBtn" onclick="toggleAutoMerge()">Merge</button>
     <button class="tool-btn" id="stopBtn" onclick="stopRecording()" style="display:none">■ Stop</button>
     <span class="rec-timer" id="recTimer" style="display:none"></span>
+  </div>
+  <div class="toolbar" id="toolbarRecord" style="display:none">
+    <div class="speed-slider-wrap">
+      <span class="speed-label" id="sliderLabel">1.00x</span>
+      <input type="range" class="speed-slider" id="speedSlider" min="0.50" max="1.00" step="0.05" value="1.00" oninput="onSliderChange(this.value)">
+    </div>
+    <button class="tool-btn" id="mirrorBtn2" onclick="toggleMirror()">Mirror</button>
+    <button class="tool-btn" id="mergeBtn2" onclick="toggleAutoMerge()">Merge</button>
   </div>
   <div class="countdown-bar">
     <div class="countdown-presets">
@@ -225,7 +249,7 @@
     <button class="cd-btn" id="bufferBtn" onclick="cycleBuffer()" style="margin-left:auto"></button>
   </div>
   <div class="takes-area" id="takesArea"></div>
-  <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="progress-bar" id="progressBar" onclick="seekProgress(event)"><div class="progress-fill" id="progressFill"></div></div>
   <div class="phrase-area">
     <div class="phrase-counter" id="phraseCounter">1 / 189</div>
     <div class="phrase-text" id="phraseText">Loading...</div>
@@ -372,6 +396,7 @@ function trackRec() { sessionRecCount++; }
 // ===== PLAYER =====
 let videoFile = null, sentences = [], currentIndex = 0, textVisible = true, video;
 let autoPauseEnabled = true, isPausedByUser = false;
+let playerMode = 'practice';
 const speeds = [0.5, 0.75, 1]; let speedIndex = 2;
 const accentedWords = {}; // key: "phraseIdx-wordIdx", stores toggled uppercase words
 const BUFFER_OPTIONS = [0.12, 0.18, 0.22, 0.28, 0.35];
@@ -506,6 +531,7 @@ function startPlayer() {
   video.load();
   startSessionTimer();
   requestWakeLock();
+  applyMode();
 
   function tick() {
     if (video && !video.paused && autoPauseEnabled && !recPreparing && sentences.length) {
@@ -580,9 +606,14 @@ function showPhrase(idx) {
   }
 }
 
+function getSpeed() {
+  if (playerMode === 'record') return parseFloat(document.getElementById('speedSlider').value);
+  return speeds[speedIndex];
+}
+
 function playPhrase(idx) {
   stopAllTakePlayback(); const s = sentences[idx];
-  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  video.currentTime = s.start; video.playbackRate = getSpeed(); video.volume = 1; video.play();
 }
 
 function nextPhrase() {
@@ -607,7 +638,7 @@ function seekToWord(wordIdx) {
   if (!s.words || !s.words[wordIdx]) return;
   stopAllTakePlayback();
   video.currentTime = s.words[wordIdx].start;
-  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  video.playbackRate = getSpeed(); video.volume = 1; video.play();
 }
 
 function cycleSplit() {
@@ -711,7 +742,7 @@ function seekToWordN(phraseIdx, wordIdx) {
   if (!ns || !ns.words || !ns.words[wordIdx]) return;
   stopAllTakePlayback();
   video.currentTime = ns.words[wordIdx].start;
-  video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  video.playbackRate = getSpeed(); video.volume = 1; video.play();
 }
 
 function toggleAccent(e, phraseIdx, wordIdx) {
@@ -749,7 +780,7 @@ function toggleTranslation() {
 function cycleSpeed() {
   speedIndex = (speedIndex+1) % speeds.length;
   document.getElementById('speedBtn').textContent = speeds[speedIndex]+'x';
-  if (video) video.playbackRate = speeds[speedIndex];
+  if (video) video.playbackRate = getSpeed();
 }
 
 function toggleLoop() {
@@ -779,7 +810,7 @@ async function startRecFlow() {
   document.getElementById('recBtn').classList.add('preparing'); document.getElementById('recBtn').textContent = 'Listen...';
   stopAllTakePlayback();
   const s = sentences[currentIndex];
-  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  video.currentTime = s.start; video.playbackRate = getSpeed(); video.volume = 1; video.play();
   setBadge('LISTEN', 'visible');
   function waitEnd() { if (video.currentTime >= s.end - PAUSE_BUFFER) { video.pause(); doCountdown(2, false); return; } requestAnimationFrame(waitEnd); }
   requestAnimationFrame(waitEnd);
@@ -820,7 +851,7 @@ function beginShadowRecording() {
   mediaRecorder.onstop = () => finishRecording('shadow');
   mediaRecorder.start(); recStartTime = Date.now();
   const s = sentences[currentIndex];
-  video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 1; video.play();
+  video.currentTime = s.start; video.playbackRate = getSpeed(); video.volume = 1; video.play();
   document.getElementById('shadowBtn').textContent = '● SHADOW'; document.getElementById('shadowBtn').classList.remove('preparing'); document.getElementById('shadowBtn').classList.add('shadow-active');
   document.getElementById('stopBtn').style.display = '';
   const timer = document.getElementById('recTimer'); timer.style.display = ''; timer.className = 'rec-timer shadow-timer';
@@ -882,7 +913,7 @@ function toggleMix(idx) {
   if (mixPlaying && playingTakeIdx === idx) { stopAllTakePlayback(); return; }
   stopAllTakePlayback(); const take = takes[idx]; if (!take || take.type !== 'shadow') return;
   mixPlaying = true; playingTakeIdx = idx;
-  const s = sentences[currentIndex]; video.currentTime = s.start; video.playbackRate = speeds[speedIndex]; video.volume = 0.5; video.play();
+  const s = sentences[currentIndex]; video.currentTime = s.start; video.playbackRate = getSpeed(); video.volume = 0.5; video.play();
   take.audio.currentTime = 0; take.audio.play();
   const mixBtn = document.getElementById('take-mix-' + idx); if (mixBtn) { mixBtn.textContent = '■ Mix'; mixBtn.classList.add('playing'); }
   takeProgressInterval = setInterval(() => { const bar = document.getElementById('take-bar-' + idx); if (bar && take.audio.duration) bar.style.width = (take.audio.currentTime / take.audio.duration * 100) + '%'; }, 50);
@@ -978,6 +1009,37 @@ function updateBufferBtn() {
 
 // Init buffer button on load
 document.addEventListener('DOMContentLoaded', updateBufferBtn);
+
+// --- MODE SELECTION ---
+function selectMode(mode) {
+  playerMode = mode;
+  document.getElementById('modePractice').classList.toggle('selected', mode === 'practice');
+  document.getElementById('modeRecord').classList.toggle('selected', mode === 'record');
+}
+
+function applyMode() {
+  document.getElementById('toolbarPractice').style.display = playerMode === 'practice' ? '' : 'none';
+  document.getElementById('toolbarRecord').style.display = playerMode === 'record' ? '' : 'none';
+}
+
+// --- SPEED SLIDER (Record mode) ---
+function onSliderChange(val) {
+  const speed = parseFloat(val);
+  document.getElementById('sliderLabel').textContent = speed.toFixed(2) + 'x';
+  if (video) video.playbackRate = speed;
+}
+
+// --- CLICKABLE PROGRESS BAR ---
+function seekProgress(e) {
+  if (!sentences.length) return;
+  const bar = document.getElementById('progressBar');
+  const rect = bar.getBoundingClientRect();
+  const pct = (e.clientX - rect.left) / rect.width;
+  const idx = Math.min(Math.floor(pct * sentences.length), sentences.length - 1);
+  currentIndex = idx;
+  showPhrase(currentIndex);
+  playPhrase(currentIndex);
+}
 
 // --- MIRROR ---
 function toggleMirror() {
