@@ -10,7 +10,7 @@
 
 Shadowing is a simple way to practise speaking: you listen to a native speaker and repeat right after them, copying the rhythm and intonation, not just the words.
 
-I was doing this with a browser extension over YouTube. The problem showed up immediately. Those tools follow subtitle blocks, and subtitles are cut to fit the screen and the timecode — not to fit a thought. So the pause would land in the middle of a sentence. I'd repeat a fragment, lose where the sentence was going, and never hear the full intonation curve from start to finish.
+I was doing this with [Language Reactor](https://www.languagereactor.com/) over YouTube. It's a good tool — for reading subtitles, looking up words, building vocabulary. But it follows subtitle blocks, and subtitles are cut to fit the screen and the timecode, not to contain a finished thought. So the pause would land in the middle of a sentence. I'd repeat a fragment, lose where the sentence was going, and never hear the full intonation curve from start to finish.
 
 Intonation is the whole point. It lives across a complete sentence — where the voice rises, where it drops at the end. Cut that in half and you're drilling nonsense.
 
@@ -29,6 +29,14 @@ The result is a simple loop:
 ```
 
 Every phrase you repeat is a complete thought, with its intonation intact.
+
+## You choose who you learn from
+
+Most language apps hand you a voice: a studio narrator reading scripted lines in a deliberately neutral accent. Useful for a while, then it stops resembling anything you'll actually hear in a meeting or a conversation.
+
+Here the source is whatever you load. A YouTuber whose delivery you like. A particular regional accent. A podcast host, an interview, a conference talk, a stand-up set. If you can get the video and a transcript, you can shadow it.
+
+That matters more than it sounds. You're not trying to sound like "an English speaker" in the abstract — you're trying to sound like someone specific. Pick a model close to how you actually want to come across, and the practice transfers much faster.
 
 ---
 
@@ -199,7 +207,7 @@ Built by **[Igor Triandafilov](https://www.linkedin.com/in/igor-triandafilov)** 
 
 Shadowing — это когда слушаешь носителя и повторяешь сразу за ним, копируя ритм и интонацию.
 
-Я занимался так через браузерное расширение поверх YouTube, и проблема вылезла сразу. Такие инструменты идут по блокам субтитров, а субтитры нарезаны под экран и таймкод, а не под законченную мысль. Пауза попадала в середину предложения. Повторяешь обрубок, теряешь смысл и никогда не слышишь интонацию целиком — а она живёт как раз на всём предложении: где голос поднимается, где падает в конце.
+Я занимался так через [Language Reactor](https://www.languagereactor.com/) поверх YouTube. Инструмент неплохой — читать субтитры, смотреть незнакомые слова, набирать лексику. Но он идёт по блокам субтитров, а субтитры нарезаны под экран и таймкод, а не под законченную мысль. Пауза попадала в середину предложения. Повторяешь обрубок, теряешь смысл и никогда не слышишь интонацию целиком — а она живёт как раз на всём предложении: где голос поднимается, где падает в конце.
 
 Попробовал через автотранскрибацию Premiere Pro — там та же беда, режет по времени.
 
@@ -212,6 +220,14 @@ Shadowing — это когда слушаешь носителя и повто�
 ```
 ▶ Играет фраза целиком → ⏸ Автопауза → 🎤 Повторяешь → ⏭ Дальше
 ```
+
+## За кем повторять — выбираешь сам
+
+Большинство приложений выдают тебе голос: студийный диктор читает заготовленные реплики нарочито нейтральным акцентом. Какое-то время полезно, потом перестаёт напоминать то, что реально услышишь в разговоре.
+
+Здесь источник — что загрузишь, то и будет. Блогер, чья манера тебе нравится. Конкретный региональный акцент. Подкаст, интервью, выступление, стендап. Есть видео и транскрипт — можно отрабатывать.
+
+Это важнее, чем кажется. Ты не учишься говорить «по-английски» вообще — ты учишься звучать как конкретный человек. Чем ближе образец к тому, как ты сам хочешь звучать, тем быстрее переносится.
 
 ## Два сценария
 
@@ -235,5 +251,69 @@ Shadowing — это когда слушаешь носителя и повто�
 - **Таймер 10/15/20 мин** и история по дням
 
 Файлы остаются на устройстве — отправлять их некуда, сервера нет.
+
+</details>
+
+<details>
+<summary>🇪🇸 En español</summary>
+
+# Shadowing Player
+
+Herramienta para practicar el habla en un idioma extranjero mediante shadowing — y para grabar vídeos con teleprompter.
+
+**[▶ Probar](https://igorswift.github.io/shadowing-player/)** — demo de 40 segundos, no hay nada que instalar.
+
+## Por qué existe
+
+El shadowing consiste en escuchar a un hablante nativo y repetir justo después, copiando el ritmo y la entonación, no solo las palabras.
+
+Yo lo hacía con [Language Reactor](https://www.languagereactor.com/) sobre YouTube. Es una buena herramienta — para leer subtítulos, consultar palabras, ampliar vocabulario. Pero sigue los bloques de subtítulos, y los subtítulos se cortan para caber en pantalla y encajar con el código de tiempo, no para contener una idea completa. La pausa caía en mitad de la oración. Repetía fragmentos, perdía el hilo y nunca llegaba a escuchar la curva de entonación entera.
+
+Y la entonación es justo lo que importa: vive a lo largo de la oración completa — dónde sube la voz, dónde baja al final. Si la partes por la mitad, estás practicando algo que no significa nada.
+
+Probé con la transcripción automática de Premiere Pro. Mismo problema: también trocea por tiempo.
+
+Así que construí lo que realmente quería.
+
+## Cómo funciona
+
+El reproductor lee de la transcripción los **límites de oración** (la marca `eos`), no los tiempos de los subtítulos. Cada frase es una idea completa, con su entonación intacta.
+
+```
+▶ Suena la frase entera → ⏸ Pausa automática → 🎤 La repites → ⏭ Siguiente
+```
+
+## Tú eliges a quién imitar
+
+La mayoría de las apps de idiomas te imponen una voz: un locutor de estudio leyendo frases guionizadas con un acento deliberadamente neutro. Sirve un tiempo, y después deja de parecerse a nada de lo que vas a oír en una conversación real.
+
+Aquí la fuente es lo que tú cargues. Un youtuber cuya forma de hablar te guste. Un acento regional concreto. Un podcast, una entrevista, una charla, un monólogo. Si consigues el vídeo y una transcripción, puedes practicarlo.
+
+Esto importa más de lo que parece. No intentas sonar «como alguien que habla inglés» en abstracto — intentas sonar como una persona concreta. Cuanto más se acerque ese modelo a como quieres expresarte tú, antes se traslada a tu forma de hablar.
+
+## Dos formas de usarlo
+
+**1. Aprender a hablar imitando a nativos.** Cargas un vídeo y su transcripción y avanzas oración por oración. Te grabas y comparas tu duración con la del original. Si una frase se te resiste, la bajas a 0.5×; si es demasiado corta para practicarla sola, la unes con la siguiente.
+
+**2. Grabar tu propio vídeo en un idioma que todavía estás aprendiendo.** Es para lo que más lo uso, y resuelve otro problema: quieres publicar un vídeo en inglés, pero no eres nativo y tu pronunciación aún no está ahí.
+
+1. Escribes tu guion en el idioma de destino
+2. Se lo haces leer a ElevenLabs con una voz que suena nativa — ya tienes una referencia de tu propio texto, bien pronunciado
+3. Cargas ese audio en el reproductor y lo practicas frase por frase hasta que la pronunciación y el ritmo se asienten
+4. Lo grabas. Activas **Mirror**: la pantalla se invierte para que el texto se lea correctamente a través del cristal semitransparente del teleprompter, de modo que miras directamente al objetivo. Un mando Bluetooth pasa las frases sin ocupar las manos
+
+Acabas grabando tu propio guion, con tu propia voz, habiendo entrenado antes cómo debería sonar.
+
+## Funciones
+
+- **Split 2/3** y **Lock** — encadena frases para pasajes largos
+- **Merge** — agrupa automáticamente las frases muy cortas
+- **Ajuste de pausa** de 0 a 350 ms, sobre la marcha
+- **Clic en una palabra** — salta a ese momento exacto; **clic derecho** — la pone en MAYÚSCULAS para marcar el acento
+- **Rec / Shadow** — graba tu voz, hasta 5 tomas con comparación de duración
+- **Mirror + Wake Lock** — modo teleprompter, la pantalla no se apaga
+- **Temporizador de 10/15/20 min** e historial diario
+
+Los archivos no salen de tu dispositivo — no hay servidor al que enviarlos.
 
 </details>
