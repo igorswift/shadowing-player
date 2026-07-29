@@ -19,21 +19,57 @@
   body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
 
   /* Setup */
-  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; gap: 20px; }
+  .setup-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100dvh; padding: 24px; gap: 14px; overflow-y: auto; }
   .setup-screen h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
-  .setup-screen p { color: var(--text-dim); font-size: 14px; text-align: center; max-width: 320px; line-height: 1.5; }
-  .file-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 320px; padding: 24px; border: 2px dashed var(--text-muted); border-radius: var(--radius); background: var(--surface); cursor: pointer; transition: all 0.2s; gap: 8px; }
+  .setup-screen p { color: var(--text-dim); font-size: 14px; text-align: center; max-width: 340px; line-height: 1.5; }
+  .setup-tagline { color: var(--text) !important; font-size: 15px !important; }
+  .file-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 320px; padding: 18px; border: 2px dashed var(--text-muted); border-radius: var(--radius); background: var(--surface); cursor: pointer; transition: all 0.2s; gap: 6px; }
   .file-btn:hover, .file-btn:active { border-color: var(--accent); background: var(--surface2); }
   .file-btn.loaded { border-color: var(--accent); border-style: solid; }
-  .file-btn .icon { font-size: 32px; } .file-btn .label { font-size: 15px; font-weight: 500; }
+  .file-btn .icon { font-size: 26px; } .file-btn .label { font-size: 15px; font-weight: 500; }
   .file-btn .status { font-size: 12px; color: var(--text-dim); } .file-btn.loaded .status { color: var(--accent); }
   .start-btn { width: 100%; max-width: 320px; padding: 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; opacity: 0.3; pointer-events: none; }
   .start-btn.ready { opacity: 1; pointer-events: auto; } .start-btn:active { transform: scale(0.97); }
 
-  .demo-btn { width: 100%; max-width: 320px; padding: 12px; margin-top: -4px; border: 1px solid var(--text-muted); border-radius: var(--radius); background: transparent; color: var(--text-dim); font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.15s; }
-  .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+  /* Primary demo CTA */
+  .demo-btn { width: 100%; max-width: 340px; padding: 20px 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 17px; font-weight: 700; cursor: pointer; transition: all 0.15s; box-shadow: 0 0 0 0 var(--accent-dim); animation: demo-pulse 2.4s ease-out infinite; }
+  .demo-btn:hover { filter: brightness(1.08); }
   .demo-btn:active { transform: scale(0.97); }
-  .demo-btn:disabled { opacity: 0.4; pointer-events: none; }
+  .demo-btn:disabled { opacity: 0.5; pointer-events: none; animation: none; }
+  @keyframes demo-pulse { 0% { box-shadow: 0 0 0 0 rgba(45,212,164,0.35); } 70% { box-shadow: 0 0 0 14px rgba(45,212,164,0); } 100% { box-shadow: 0 0 0 0 rgba(45,212,164,0); } }
+  .demo-hint { font-size: 12px !important; color: var(--text-muted) !important; margin-top: -6px; }
+
+  .setup-divider { display: flex; align-items: center; gap: 10px; width: 100%; max-width: 340px; color: var(--text-muted); font-size: 11px; letter-spacing: 1px; margin: 2px 0; }
+  .setup-divider::before, .setup-divider::after { content: ''; flex: 1; height: 1px; background: var(--text-muted); opacity: 0.5; }
+
+  /* Collapsible own-files block */
+  .own-files { width: 100%; max-width: 340px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .own-files-toggle { width: 100%; padding: 12px; border: 1px solid var(--text-muted); border-radius: var(--radius); background: transparent; color: var(--text-dim); font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .own-files-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .own-files-body { display: none; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+  .own-files-body.open { display: flex; }
+
+  /* Footer links */
+  .setup-links { display: flex; gap: 16px; align-items: center; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+  .setup-links a, .setup-links button { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 12px; text-decoration: none; background: none; border: none; cursor: pointer; padding: 4px; transition: color 0.15s; }
+  .setup-links a:hover, .setup-links button:hover { color: var(--accent); }
+
+  /* About panel */
+  .about-panel { position: fixed; inset: 0; background: var(--bg); z-index: 150; overflow-y: auto; padding: 28px 24px 48px; display: none; }
+  .about-panel.open { display: block; }
+  .about-inner { max-width: 560px; margin: 0 auto; }
+  .about-panel h2 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+  .about-panel h3 { font-size: 14px; font-weight: 600; color: var(--text); margin: 22px 0 8px; }
+  .about-panel p { color: var(--text-dim); font-size: 14px; line-height: 1.6; margin-bottom: 10px; text-align: left; max-width: none; }
+  .about-panel ul { list-style: none; margin: 0; padding: 0; }
+  .about-panel li { color: var(--text-dim); font-size: 14px; line-height: 1.6; padding-left: 16px; position: relative; margin-bottom: 6px; }
+  .about-panel li::before { content: '—'; position: absolute; left: 0; color: var(--accent); }
+  .about-panel strong { color: var(--text); font-weight: 600; }
+  .about-panel a { color: var(--accent); text-decoration: none; }
+  .about-panel a:hover { text-decoration: underline; }
+  .about-close { position: sticky; top: 0; float: right; padding: 8px 16px; border: 1px solid var(--text-muted); border-radius: 20px; background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 12px; cursor: pointer; }
+  .about-close:hover { border-color: var(--accent); color: var(--accent); }
+  .about-tech { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); line-height: 1.8; }
 
   /* Mode selector */
   .mode-selector { display: flex; gap: 0; width: 100%; max-width: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--text-muted); }
@@ -186,21 +222,85 @@
 
 <div class="setup-screen" id="setup">
   <h1>Shadowing Player</h1>
-  <p>Load a video or audio file and a transcript JSON to start practicing.</p>
-  <div class="file-btn" id="videoPicker" onclick="document.getElementById('videoInput').click()">
-    <span class="icon">🎬</span><span class="label">Media file</span><span class="status" id="videoStatus">tap to select .mp4 / .mp3</span>
+  <p class="setup-tagline">Repeat complete sentences, not chopped-up fragments.</p>
+
+  <button class="demo-btn" id="demoBtn" onclick="loadDemo()">▶ Try it now — no files needed</button>
+  <p class="demo-hint">Loads a 40-second sample. Nothing to download, nothing to sign up for.</p>
+
+  <div class="setup-divider">OR USE YOUR OWN</div>
+
+  <div class="own-files">
+    <button class="own-files-toggle" id="ownFilesToggle" onclick="toggleOwnFiles()">Load my own video + transcript</button>
+    <div class="own-files-body" id="ownFilesBody">
+      <div class="file-btn" id="videoPicker" onclick="document.getElementById('videoInput').click()">
+        <span class="icon">🎬</span><span class="label">Media file</span><span class="status" id="videoStatus">tap to select .mp4 / .mp3</span>
+      </div>
+      <input type="file" id="videoInput" accept="video/*,audio/*,.mp3,.m4a,.wav,.ogg">
+      <div class="file-btn" id="jsonPicker" onclick="document.getElementById('jsonInput').click()">
+        <span class="icon">📝</span><span class="label">Transcript JSON</span><span class="status" id="jsonStatus">tap to select .json</span>
+      </div>
+      <input type="file" id="jsonInput" accept=".json">
+      <div class="mode-selector">
+        <button class="mode-btn selected" id="modePractice" onclick="selectMode('practice')">🎧 Practice</button>
+        <button class="mode-btn" id="modeRecord" onclick="selectMode('record')">🎬 Record</button>
+      </div>
+      <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
+    </div>
   </div>
-  <input type="file" id="videoInput" accept="video/*,audio/*,.mp3,.m4a,.wav,.ogg">
-  <div class="file-btn" id="jsonPicker" onclick="document.getElementById('jsonInput').click()">
-    <span class="icon">📝</span><span class="label">Transcript JSON</span><span class="status" id="jsonStatus">tap to select .json</span>
+
+  <div class="setup-links">
+    <button onclick="openAbout()">About</button>
+    <a href="https://github.com/igorswift/shadowing-player" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://www.linkedin.com/in/igor-triandafilov" target="_blank" rel="noopener">LinkedIn</a>
   </div>
-  <input type="file" id="jsonInput" accept=".json">
-  <div class="mode-selector">
-    <button class="mode-btn selected" id="modePractice" onclick="selectMode('practice')">🎧 Practice</button>
-    <button class="mode-btn" id="modeRecord" onclick="selectMode('record')">🎬 Record</button>
+</div>
+
+<div class="about-panel" id="aboutPanel">
+  <div class="about-inner">
+    <button class="about-close" onclick="closeAbout()">✕ Close</button>
+    <h2>About</h2>
+    <p>A single HTML file for practising spoken English by shadowing — listening to a native speaker and repeating right after them.</p>
+
+    <h3>The problem</h3>
+    <p>Most tools split subtitles by timing rather than by meaning, so you end up repeating half-sentences. Auto-captions cut wherever the timecode falls, not where the thought ends.</p>
+
+    <h3>How this works instead</h3>
+    <p>The player reads sentence boundaries straight from the transcript, so every phrase you repeat is a complete thought. It plays one sentence, pauses on its own, and waits for you.</p>
+
+    <h3>What it does</h3>
+    <ul>
+      <li><strong>Auto-pause</strong> at sentence boundaries, with an adjustable buffer</li>
+      <li><strong>Split</strong> — merge 2–3 sentences into one continuous run for longer passages</li>
+      <li><strong>Merge</strong> — automatically group very short phrases into workable blocks</li>
+      <li><strong>Click a word</strong> to jump to that exact moment; right-click to mark stress in CAPS</li>
+      <li><strong>Record &amp; Shadow</strong> — capture your voice, compare timing against the original</li>
+      <li><strong>Mirror mode</strong> — flips the interface for beam-splitter teleprompters</li>
+      <li><strong>Practice timer</strong> and daily history to build the habit</li>
+    </ul>
+
+    <h3>Two modes</h3>
+    <p><strong>Practice</strong> gives you the full kit: looping, voice recording, take comparison. <strong>Record</strong> strips it down for filming to camera with a teleprompter, adding a fine-grained speed slider.</p>
+
+    <h3>Why I built it</h3>
+    <p>I was learning English and filming videos at the same time, and every existing tool got the phrase splitting wrong. So I wrote the one I wanted: no accounts, no server, no build step. Your files never leave your device.</p>
+
+    <h3>Built with</h3>
+    <p class="about-tech">
+      Vanilla JS, zero dependencies<br>
+      MediaRecorder API — voice capture<br>
+      Web Audio API — mixing and timer chimes<br>
+      Wake Lock API — keeps the screen alive mid-take<br>
+      localStorage — session history<br>
+      Transcripts: Premiere Pro auto-transcription (JSON)
+    </p>
+
+    <h3>Links</h3>
+    <p>
+      <a href="https://github.com/igorswift/shadowing-player" target="_blank" rel="noopener">Source on GitHub</a><br>
+      <a href="https://www.linkedin.com/in/igor-triandafilov" target="_blank" rel="noopener">Igor Triandafilov on LinkedIn</a>
+    </p>
+    <p class="about-tech">Demo clip: VOA Learning English — public domain.</p>
   </div>
-  <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
-  <button class="demo-btn" id="demoBtn" onclick="loadDemo()">▶ Try the demo — no files needed</button>
 </div>
 
 <div class="history-panel" id="historyPanel">
@@ -524,6 +624,17 @@ function toggleAutoMerge() {
 
 function checkReady() { if (videoFile && sentences.length) document.getElementById('startBtn').classList.add('ready'); }
 
+// --- SETUP SCREEN UI ---
+function toggleOwnFiles() {
+  const body = document.getElementById('ownFilesBody');
+  const btn = document.getElementById('ownFilesToggle');
+  const open = body.classList.toggle('open');
+  btn.textContent = open ? 'Hide file pickers' : 'Load my own video + transcript';
+}
+
+function openAbout() { document.getElementById('aboutPanel').classList.add('open'); }
+function closeAbout() { document.getElementById('aboutPanel').classList.remove('open'); }
+
 // --- DEMO MODE ---
 async function loadDemo() {
   const btn = document.getElementById('demoBtn');
@@ -819,7 +930,8 @@ function togglePause() {
 function toggleText() {
   textVisible = !textVisible;
   document.getElementById('phraseText').classList.toggle('dimmed', !textVisible);
-  document.getElementById('toggleLabel').textContent = textVisible ? 'Hide' : 'Show';
+  const lbl = document.getElementById('toggleLabel');
+  if (lbl) lbl.textContent = textVisible ? 'Hide' : 'Show';
 }
 
 function toggleTranslation() {
@@ -1123,6 +1235,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (document.getElementById('aboutPanel').classList.contains('open')) { if (e.key === 'Escape') closeAbout(); return; }
   if (document.getElementById('historyPanel').classList.contains('open')) { if (e.key === 'Escape') closeHistory(); return; }
   if (!document.getElementById('player').classList.contains('active')) return;
   switch(e.key) {
