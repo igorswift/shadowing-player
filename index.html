@@ -30,6 +30,11 @@
   .start-btn { width: 100%; max-width: 320px; padding: 16px; border: none; border-radius: var(--radius); background: var(--accent); color: var(--bg); font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer; opacity: 0.3; pointer-events: none; }
   .start-btn.ready { opacity: 1; pointer-events: auto; } .start-btn:active { transform: scale(0.97); }
 
+  .demo-btn { width: 100%; max-width: 320px; padding: 12px; margin-top: -4px; border: 1px solid var(--text-muted); border-radius: var(--radius); background: transparent; color: var(--text-dim); font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.15s; }
+  .demo-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .demo-btn:active { transform: scale(0.97); }
+  .demo-btn:disabled { opacity: 0.4; pointer-events: none; }
+
   /* Mode selector */
   .mode-selector { display: flex; gap: 0; width: 100%; max-width: 320px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--text-muted); }
   .mode-btn { flex: 1; padding: 12px; border: none; background: var(--surface); color: var(--text-dim); font-family: inherit; font-size: 14px; font-weight: 500; cursor: pointer; text-align: center; transition: all 0.15s; }
@@ -138,6 +143,8 @@
   .phrase-text.dimmed { opacity: 0.15; }
   .phrase-time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-muted); margin-top: 6px; }
 
+  .demo-credit { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); margin-top: 4px; opacity: 0.7; }
+
   .word { cursor: pointer; transition: color 0.15s; }
   .word:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
   .split-next { font-size: 20px; font-weight: 500; line-height: 1.5; color: var(--text); margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--surface2); }
@@ -193,6 +200,7 @@
     <button class="mode-btn" id="modeRecord" onclick="selectMode('record')">🎬 Record</button>
   </div>
   <button class="start-btn" id="startBtn" onclick="startPlayer()">Start Shadowing</button>
+  <button class="demo-btn" id="demoBtn" onclick="loadDemo()">▶ Try the demo — no files needed</button>
 </div>
 
 <div class="history-panel" id="historyPanel">
@@ -256,6 +264,7 @@
     <div class="split-next" id="splitNext" style="display:none"></div>
     <div class="phrase-translation" id="phraseTranslation" style="display:none"></div>
     <div class="phrase-time" id="phraseTime">00:00</div>
+    <div class="demo-credit" id="demoCredit" style="display:none"></div>
   </div>
   <div class="controls">
     <button class="ctrl-btn" onclick="prevPhrase()"><span class="ctrl-icon">⏮</span>Prev</button>
@@ -405,7 +414,7 @@ let PAUSE_BUFFER = BUFFER_OPTIONS[bufferIndex];
 let loopEnabled = false, loopCount = 0; const LOOP_MAX = 3; const MAX_TAKES = 5;
 let splitMode = false, splitEndTime = 0, splitLock = false, splitCount = 0;
 let translationVisible = false, hasTranslations = false;
-let autoMerge = false, rawSentences = [], rawJsonData = null;
+let autoMerge = false, rawSentences = [], rawJsonData = null, demoCredit = '';
 let mediaRecorder = null, recordedChunks = [], micStream = null;
 let isRecording = false, recPreparing = false, shadowMode = false;
 let recStartTime = 0, recTimerInterval = null;
@@ -438,7 +447,7 @@ function parseTranscript(data) {
   for (const seg of data.segments) {
     let wordTimings = [], start = null;
     for (const w of seg.words) {
-      if (w.type !== 'word') continue;
+      if (w.type !== 'word' || !w.text || !w.text.trim()) continue;
       if (start === null) start = w.start;
       wordTimings.push({ text: w.text, start: w.start, end: w.start + w.duration });
       if (w.eos) {
@@ -514,6 +523,49 @@ function toggleAutoMerge() {
 }
 
 function checkReady() { if (videoFile && sentences.length) document.getElementById('startBtn').classList.add('ready'); }
+
+// --- DEMO MODE ---
+async function loadDemo() {
+  const btn = document.getElementById('demoBtn');
+  const orig = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Loading demo…';
+  try {
+    const jsonRes = await fetch('demo/sample.json');
+    if (!jsonRes.ok) throw new Error('No demo transcript');
+    rawJsonData = await jsonRes.json();
+
+    // Try video first, fall back to audio
+    let media = null, name = '', mime = '';
+    for (const [file, type] of [['sample.mp4', 'video/mp4'], ['sample.mp3', 'audio/mpeg']]) {
+      const res = await fetch('demo/' + file);
+      if (res.ok) { media = await res.blob(); name = file; mime = type; break; }
+    }
+    if (!media) throw new Error('No demo media');
+
+    videoFile = new File([media], name, { type: mime });
+    sentences = parseTranscript(rawJsonData);
+    if (!sentences.length) throw new Error('Empty transcript');
+
+    demoCredit = rawJsonData.credit || '';
+    document.getElementById('videoStatus').textContent = name;
+    document.getElementById('videoPicker').classList.add('loaded');
+    document.getElementById('jsonStatus').textContent = `${sentences.length} phrases`;
+    document.getElementById('jsonPicker').classList.add('loaded');
+    checkReady();
+    startPlayer();
+    showCredit();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Demo unavailable — pick your own files';
+    setTimeout(() => { btn.textContent = orig; }, 3000);
+  }
+}
+
+function showCredit() {
+  const el = document.getElementById('demoCredit');
+  if (demoCredit) { el.textContent = demoCredit; el.style.display = ''; }
+  else { el.style.display = 'none'; }
+}
 
 function startPlayer() {
   if (!videoFile || !sentences.length) return;
