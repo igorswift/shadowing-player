@@ -1,134 +1,144 @@
 # Shadowing Player
 
-One HTML file. No frameworks. No accounts. No servers.
-Load a video or audio file, load a transcript, practice.
+**A practice tool for speaking a foreign language out loud — one that doesn't cut sentences in half.**
 
-**[Launch →](https://igorswift.github.io/shadowing-player/)**
-
----
-
-## The Problem
-
-Every shadowing tool out there — Language Reactor, YouTube auto-captions, even Premiere Pro's built-in player — chops phrases by **timing**, not by **meaning**. You end up repeating half-sentences. That's not shadowing. That's noise.
-
-## The Solution
-
-This player uses sentence boundaries from the transcript. Every phrase you repeat is a complete thought. The rest is a tight practice loop: play → pause → repeat → compare → next.
+### [▶ Try it live](https://igorswift.github.io/shadowing-player/) — 40-second demo, nothing to install
 
 ---
 
-## Core Loop
+## Why this exists
+
+Shadowing is a simple way to practise speaking: you listen to a native speaker and repeat right after them, copying the rhythm and intonation, not just the words.
+
+I was doing this with a browser extension over YouTube. The problem showed up immediately. Those tools follow subtitle blocks, and subtitles are cut to fit the screen and the timecode — not to fit a thought. So the pause would land in the middle of a sentence. I'd repeat a fragment, lose where the sentence was going, and never hear the full intonation curve from start to finish.
+
+Intonation is the whole point. It lives across a complete sentence — where the voice rises, where it drops at the end. Cut that in half and you're drilling nonsense.
+
+I tried Premiere Pro's built-in transcription instead. Same problem: it also chunks by time.
+
+So I built the thing I actually wanted.
+
+## What it does differently
+
+It reads **sentence boundaries** from the transcript, not subtitle timings. Premiere's auto-transcription marks the end of every sentence, and the player splits on that.
+
+The result is a simple loop:
 
 ```
-▶ Phrase plays → ⏸ Auto-pause → 🎤 Your turn → ⏭ Next
+▶ One full sentence plays  →  ⏸ Auto-pause  →  🎤 You repeat it  →  ⏭ Next
 ```
 
-1. Load an `.mp4` / `.mp3` file and a `.json` transcript (Premiere Pro auto-transcription format)
-2. Player splits the transcript into sentences using `eos` flags and word-level timestamps
-3. Each sentence plays, auto-pauses at the boundary, and waits for you
-4. Navigate with arrow keys or a Bluetooth remote, record yourself, compare timing, move on
+Every phrase you repeat is a complete thought, with its intonation intact.
+
+---
+
+## Two ways to use it
+
+### 1. Learn to speak by copying native speakers
+
+Load a video of someone speaking, load the transcript, and work through it sentence by sentence. Record yourself and compare your timing against the original. If a sentence is too long, slow it to 0.5×. If it's too short to be useful on its own, merge it with the next one.
+
+### 2. Record your own video in a language you're still learning
+
+This is the part I use most, and it solves a different problem: you want to publish a video in English, but you're not a native speaker and your pronunciation isn't there yet.
+
+The workflow:
+
+1. **Write your script** in the target language.
+2. **Have ElevenLabs read it** in a native-sounding voice. Now you have a reference recording of your own words, spoken correctly.
+3. **Load that audio into the player** and practise it phrase by phrase until the pronunciation and rhythm stick.
+4. **Film it.** Turn on **Mirror mode** — it flips the screen so the text reads correctly through a beam-splitter teleprompter, letting you look straight into the lens. A Bluetooth remote moves you through the phrases hands-free.
+
+You end up recording your own script, in your own voice, having already trained on how it should sound.
 
 ---
 
 ## Features
 
-### Practice
+### Working through phrases
 
-| Feature | What it does |
-|---------|-------------|
-| **Auto-pause** | Stops at sentence boundaries — no cut-off phrases |
-| **Split: 2 / 3** | Merges current + next 1–2 phrases into one continuous playback. Cycle with one button: Off → 2 → 3 → Off |
-| **Split Lock** | Keeps Split active across navigation. Next skips +2 or +3, Prev goes back by the same amount. Every phrase auto-pairs |
-| **Merge** | Auto-joins short phrases (< 2s) into blocks (max 8s). Toggle on/off without losing your position |
-| **Click any word** | Tap a word → playback jumps to that exact timestamp |
-| **Rec** | Listen → countdown → record your voice → auto-playback. Compare your timing with the original |
-| **Shadow** | Phrase + your mic record simultaneously. Hit Mix to hear both layered (original 50% + voice 100%) |
-| **5 takes per phrase** | Duration vs original, diff in seconds, color-coded. Reset after 5 |
-| **Speed** | 0.75x for hard phrases, 1x for normal |
-| **Loop** | Phrase repeats 3× automatically |
+| | |
+|---|---|
+| **Auto-pause** | Stops at the end of each sentence, never mid-phrase |
+| **Buffer tuner** | Fine-tune where the pause lands: 0–350 ms |
+| **Split: 2 / 3** | Chain two or three sentences into one continuous run |
+| **Split Lock** | Keeps that grouping as you move through the whole transcript |
+| **Merge** | Auto-groups very short phrases into workable blocks |
+| **Click a word** | Jumps playback to that exact moment |
+| **Right-click a word** | Marks it in CAPS, so you can see where to put the stress |
+| **Speed** | 0.5× / 0.75× / 1×, or a continuous slider in Record mode |
 
-### Teleprompter
+### Recording your voice
 
-| Feature | What it does |
-|---------|-------------|
-| **Mirror** | Flips the entire interface vertically for beam-splitter teleprompters. Bigger font in mirror mode |
-| **Wake Lock** | Screen stays on while the player is active — no dimming during recording |
-| **Translation (RU)** | Shows Russian translation below each phrase. Toggle on/off. Translations stored in JSON |
+| | |
+|---|---|
+| **Rec** | Listen, countdown, record, play back. Your duration vs the original |
+| **Shadow** | Records you while the phrase plays. Mix layers both together |
+| **5 takes per phrase** | Colour-coded timing difference, so you can see yourself improving |
+| **Loop** | Repeats a phrase three times automatically |
 
-### Tracking
+### Filming with a teleprompter
 
-| Feature | What it does |
-|---------|-------------|
-| **Session timer** | Running clock, phrases covered, recordings made |
-| **Practice timer** | 10 / 15 / 20 min countdown. Beeps when done. Build a daily habit |
-| **History** | Daily breakdown with deltas (↑↓) and all-time stats. Stored in localStorage |
-| **Tab-switch pause** | Switch tabs → video pauses. No lost position |
+| | |
+|---|---|
+| **Mirror** | Flips the interface for beam-splitter teleprompters |
+| **Wake Lock** | Screen never dims in the middle of a take |
+| **Bluetooth remote** | Standard remotes just work — arrows to move, space to pause |
+| **Record mode** | Hides recording controls, adds a fine speed slider |
+
+### Keeping the habit
+
+| | |
+|---|---|
+| **Practice timer** | 10 / 15 / 20 minutes, with a chime at the end |
+| **History** | Daily totals with ↑↓ trends, stored locally |
+| **Session bar** | Time, phrases covered, takes recorded |
 
 ---
 
-## Keyboard Shortcuts
+## Keyboard shortcuts
 
 | Key | Action |
 |-----|--------|
-| `←` `→` | Previous / Next phrase |
+| `←` `→` | Previous / next phrase |
 | `↑` `↓` | Replay current phrase |
-| `Space` | Pause / Play |
+| `Space` | Pause / play |
+| `F` | Cycle Split (off → 2 → 3) |
 | `R` | Record |
 | `W` | Shadow mode |
-| `F` | Cycle Split (Off → 2 → 3) |
-| `H` | Hide / Show text |
 | `S` | Cycle speed |
-| `L` | Toggle loop |
-| `T` | Toggle translation |
-| `P` | Toggle mirror |
-| `M` | Toggle merge |
+| `L` | Loop |
+| `M` | Merge |
+| `P` | Mirror |
+| `T` | Translation |
 
-All shortcuts work with Bluetooth remotes that send standard HID key events.
-
----
-
-## Setup
-
-### Option A: Browser (instant)
-
-1. Open `index.html` in any modern browser
-2. Select video (.mp4) or audio (.mp3)
-3. Select transcript (.json)
-4. Go
-
-### Option B: Full workflow
-
-1. Download video → `yt-dlp -f "bv[vcodec^=avc1]+ba" URL`
-2. Import into Premiere Pro → auto-transcribe
-3. Export transcript as JSON
-4. Open the player, load both files
-5. Practice
-
-### Option C: AI voiceover workflow
-
-1. Write a script, generate audio with ElevenLabs (or any TTS)
-2. Import .mp3 into Premiere Pro → auto-transcribe → export JSON
-3. Load both into the player
-4. Use Mirror mode with a teleprompter to practice and record
-
-### Option D: Hosted
-
-**[igorswift.github.io/shadowing-player](https://igorswift.github.io/shadowing-player/)**
-
-Everything stays on your device. Nothing is uploaded.
+Bluetooth presenter remotes send these same key events, so they work without any setup.
 
 ---
 
-## Transcript Format
+## Getting started
 
-The player expects Premiere Pro's auto-transcription JSON:
+**Just looking?** Open the [live version](https://igorswift.github.io/shadowing-player/) and press **Try it now**. A sample clip loads instantly.
+
+**Using your own material?** You need two files: a video or audio file, and a transcript in Premiere Pro's JSON format.
+
+1. Download a video — `yt-dlp -f "bv[vcodec^=avc1]+ba" URL`
+2. Import into Premiere Pro, run auto-transcription
+3. Export the transcript as JSON
+4. In the player, expand **Load my own video + transcript** and pick both files
+
+Everything runs in the browser. Your files never leave your device — there's no server to send them to.
+
+**Offline:** save `index.html` anywhere and open it in a browser. It works with no connection at all. (The bundled demo needs `http(s)`, since browsers block loading files from local disk — but your own files work either way.)
+
+---
+
+## Transcript format
 
 ```json
 {
-  "translations": [
-    "Перевод первой фразы.",
-    "Перевод второй фразы."
-  ],
+  "credit": "Optional attribution, shown under the phrase",
+  "translations": ["First sentence translated.", "Second one."],
   "segments": [
     {
       "words": [
@@ -140,35 +150,39 @@ The player expects Premiere Pro's auto-transcription JSON:
 }
 ```
 
-- `eos: true` marks sentence boundaries — this is how the player knows where to split
-- Word-level `start` and `duration` power click-to-seek and Split timing
-- `type: "word"` filters out punctuation-only entries
-- `translations` array (optional) — one translation per sentence, shown via RU button
+`eos: true` marks the end of a sentence — that's the flag everything is built on. Word-level `start` and `duration` power click-to-seek. `translations` and `credit` are optional and aren't produced by Premiere; add them by hand if you want them.
 
 ---
 
 ## Tech
 
-- **Zero dependencies** — no npm, no build, no CDN
-- Single `index.html` — markup + styles + logic
-- MediaRecorder API for voice capture
-- Web Audio API for timer beeps
-- Wake Lock API to prevent screen dimming
-- localStorage for session history
-- requestAnimationFrame for auto-pause timing (adaptive: 120ms desktop, 220ms mobile)
-- Works offline after first load
+Vanilla JavaScript, zero dependencies. No npm, no CDN, no build step. Markup, styles and logic live in one `index.html`.
+
+- **MediaRecorder API** — voice capture
+- **Web Audio API** — layering your take over the original, timer chimes
+- **Wake Lock API** — keeps the screen on while filming
+- **localStorage** — practice history
+- **requestAnimationFrame** — auto-pause timing
+
+### A problem worth mentioning
+
+Auto-pause was clipping the start of the next phrase on Android, while behaving perfectly on desktop.
+
+The cause: mobile Chrome fires `requestAnimationFrame` less precisely, so a fixed lookahead that was accurate at 120 ms simply arrived too late. Making the buffer device-aware fixed it — 120 ms on desktop, 220 ms on mobile.
+
+But the right value also depends on the speaker: some leave a clear beat between sentences, others run straight on. So it became a control you can adjust while practising, rather than a constant buried in the code.
 
 ---
 
-## Why
+## Demo clip
 
-I needed a shadowing tool that doesn't suck. Everything available either cuts phrases wrong, requires an account, needs internet, or buries the practice loop under features nobody asked for.
+The `demo/` folder holds the sample used by the **Try it now** button.
 
-This is the tool I wanted. One file, works anywhere, does one thing well.
+Source: [VOA Learning English](https://learningenglish.voanews.com/) — public domain.
 
 ---
 
-*Built for personal use. If it helps you too — good.*
+Built by **[Igor Triandafilov](https://www.linkedin.com/in/igor-triandafilov)** — originally to learn English and film my own videos. If it's useful to you too, good.
 
 ---
 
@@ -177,35 +191,49 @@ This is the tool I wanted. One file, works anywhere, does one thing well.
 
 # Shadowing Player
 
-Офлайн-инструмент для практики английского методом shadowing и записи видео с телепромптером. Один HTML-файл. Без аккаунтов, без серверов, без зависимостей.
+Тренажёр для практики речи на иностранном языке методом shadowing — и для записи видео через телепромптер.
 
-## Проблема
+**[▶ Попробовать](https://igorswift.github.io/shadowing-player/)** — демо на 40 секунд, ставить ничего не нужно.
 
-YouTube, Language Reactor, даже Premiere Pro — все режут фразы по таймингу, а не по смыслу. Повторяешь обрубки предложений.
+## Зачем
 
-## Решение
+Shadowing — это когда слушаешь носителя и повторяешь сразу за ним, копируя ритм и интонацию.
 
-Плеер использует границы предложений из транскрипта (флаг `eos`). Каждая фраза — законченная мысль.
+Я занимался так через браузерное расширение поверх YouTube, и проблема вылезла сразу. Такие инструменты идут по блокам субтитров, а субтитры нарезаны под экран и таймкод, а не под законченную мысль. Пауза попадала в середину предложения. Повторяешь обрубок, теряешь смысл и никогда не слышишь интонацию целиком — а она живёт как раз на всём предложении: где голос поднимается, где падает в конце.
+
+Попробовал через автотранскрибацию Premiere Pro — там та же беда, режет по времени.
+
+Поэтому написал своё.
+
+## Как работает
+
+Плеер берёт из транскрипта **границы предложений** (флаг `eos`), а не тайминги субтитров. Каждая фраза — законченная мысль с целой интонацией.
+
+```
+▶ Играет фраза целиком → ⏸ Автопауза → 🎤 Повторяешь → ⏭ Дальше
+```
+
+## Два сценария
+
+**1. Учиться говорить за носителем.** Загружаешь видео и транскрипт, идёшь по предложениям. Записываешь себя, сравниваешь тайминг с оригиналом. Сложную фразу замедляешь до 0.5×, короткие склеиваешь.
+
+**2. Записывать своё видео на иностранном языке.** Это то, ради чего я в основном им пользуюсь:
+
+1. Пишешь сценарий на нужном языке
+2. Озвучиваешь его в ElevenLabs голосом носителя — получается эталон твоего же текста
+3. Загружаешь эту озвучку в плеер и отрабатываешь по фразам, пока произношение не ляжет
+4. Снимаешь. Включаешь **Mirror** — экран переворачивается, и текст читается правильно через телепромптер с полупрозрачным зеркалом, то есть смотришь прямо в объектив. Bluetooth-пульт листает фразы, руки свободны
 
 ## Возможности
 
-- **Split: 2/3** — склеивает фразы для непрерывного воспроизведения
-- **Lock** — Split не сбрасывается при навигации, каждая фраза автоматически склеивается
-- **Merge** — автоматически объединяет короткие фразы (< 2с) в блоки
-- **Mirror** — зеркалит интерфейс для телепромптера с beam-splitter
-- **Перевод** — показывает русский перевод под фразой
-- **Rec / Shadow** — запись голоса с таймингом и сравнением
-- **Таймер** — 10/15/20 мин обратный отсчёт для формирования привычки
-- **Wake Lock** — экран не гаснет во время записи
-- **Bluetooth пульт** — все шорткаты работают с BT-пультом
+- **Split 2/3** и **Lock** — склейка фраз для длинных пассажей
+- **Merge** — автообъединение коротких фраз
+- **Буфер паузы** 0–350 мс — подстройка на ходу
+- **Клик по слову** — перемотка, **правый клик** — ЗАГЛАВНЫЕ для акцента
+- **Rec / Shadow** — запись голоса, до 5 дублей со сравнением
+- **Mirror + Wake Lock** — режим телепромптера
+- **Таймер 10/15/20 мин** и история по дням
 
-## Как пользоваться
-
-1. Открой `index.html` или [hosted версию](https://igorswift.github.io/shadowing-player/)
-2. Загрузи видео/аудио (.mp4/.mp3) и транскрипт (.json из Premiere Pro)
-3. Стрелками — навигация, F — Split, пробел — пауза
-4. Mirror + BT пульт — режим телепромптера для записи на камеру
-
-Файлы остаются на устройстве — ничего никуда не загружается.
+Файлы остаются на устройстве — отправлять их некуда, сервера нет.
 
 </details>
