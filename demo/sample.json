@@ -1,0 +1,694 @@
+{
+  "credit": "Demo: VOA Learning English — public domain (learningenglish.voanews.com)",
+  "language": "en-us",
+  "segments": [
+    {
+      "duration": 24.480000001791225,
+      "language": "en-us",
+      "speaker": "6eca7ad5-571a-42de-a545-1be71ebbb774",
+      "start": 0,
+      "words": [
+        {
+          "confidence": 1,
+          "duration": 0.42,
+          "eos": false,
+          "start": 0,
+          "tags": [],
+          "text": "Okay,",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.64,
+          "eos": false,
+          "start": 0.44,
+          "tags": [],
+          "text": "now",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.28,
+          "eos": false,
+          "start": 1.08,
+          "tags": [],
+          "text": "think",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 1.36,
+          "tags": [],
+          "text": "about",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.24,
+          "eos": false,
+          "start": 1.76,
+          "tags": [],
+          "text": "what",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 2,
+          "tags": [],
+          "text": "we",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 2.2,
+          "tags": [],
+          "text": "did",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 2.44,
+          "tags": [],
+          "text": "today",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.24,
+          "eos": false,
+          "start": 2.84,
+          "tags": [],
+          "text": "with",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.16,
+          "eos": false,
+          "start": 3.08,
+          "tags": [],
+          "text": "the",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 3.24,
+          "tags": [],
+          "text": "first",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.84,
+          "eos": true,
+          "start": 3.68,
+          "tags": [],
+          "text": "picture.",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.28,
+          "eos": false,
+          "start": 4.72,
+          "tags": [],
+          "text": "Your",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.52,
+          "eos": false,
+          "start": 5,
+          "tags": [],
+          "text": "assignment",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.28,
+          "eos": false,
+          "start": 5.52,
+          "tags": [],
+          "text": "was",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.12,
+          "eos": false,
+          "start": 5.8,
+          "tags": [],
+          "text": "to",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.8,
+          "eos": false,
+          "start": 5.96,
+          "tags": [],
+          "text": "choose",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.28,
+          "eos": false,
+          "start": 6.8,
+          "tags": [],
+          "text": "a",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 7.08,
+          "tags": [],
+          "text": "teaching",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.76,
+          "eos": true,
+          "start": 7.52,
+          "tags": [],
+          "text": "topic.",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.6,
+          "eos": false,
+          "start": 8.52,
+          "tags": [],
+          "text": "Explain",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.16,
+          "eos": false,
+          "start": 9.12,
+          "tags": [],
+          "text": "it",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 9.28,
+          "tags": [],
+          "text": "in",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 9.48,
+          "tags": [],
+          "text": "your",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 9.68,
+          "tags": [],
+          "text": "own",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 9.88,
+          "tags": [],
+          "text": "words",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.76,
+          "eos": false,
+          "start": 10.28,
+          "tags": [],
+          "text": "and",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 11.04,
+          "tags": [],
+          "text": "give",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.24,
+          "eos": false,
+          "start": 11.52,
+          "tags": [],
+          "text": "an",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.52,
+          "eos": false,
+          "start": 11.76,
+          "tags": [],
+          "text": "example",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 12.28,
+          "tags": [],
+          "text": "of",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.28,
+          "eos": false,
+          "start": 12.48,
+          "tags": [],
+          "text": "where",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.12,
+          "eos": false,
+          "start": 12.76,
+          "tags": [],
+          "text": "you",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 12.88,
+          "tags": [],
+          "text": "say",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.32,
+          "eos": false,
+          "start": 13.08,
+          "tags": [],
+          "text": "that",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 13.4,
+          "tags": [],
+          "text": "in",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.12,
+          "eos": false,
+          "start": 13.84,
+          "tags": [],
+          "text": "the",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 13.96,
+          "tags": [],
+          "text": "video",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.68,
+          "eos": true,
+          "start": 14.36,
+          "tags": [],
+          "text": "course.",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.24,
+          "eos": false,
+          "start": 15.24,
+          "tags": [],
+          "text": "Can",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.12,
+          "eos": false,
+          "start": 15.48,
+          "tags": [],
+          "text": "you",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.16,
+          "eos": false,
+          "start": 15.6,
+          "tags": [],
+          "text": "tell",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.12,
+          "eos": false,
+          "start": 15.8,
+          "tags": [],
+          "text": "me",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 15.92,
+          "tags": [],
+          "text": "what",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.16,
+          "eos": false,
+          "start": 16.12,
+          "tags": [],
+          "text": "you",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.68,
+          "eos": true,
+          "start": 16.28,
+          "tags": [],
+          "text": "chose?",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 17.08,
+          "tags": [],
+          "text": "I",
+          "type": "word"
+        },
+        {
+          "confidence": 0.7699999809265137,
+          "duration": 0.32,
+          "eos": false,
+          "start": 17.52,
+          "tags": [],
+          "text": "chose",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 1.4,
+          "eos": true,
+          "start": 17.84,
+          "tags": [],
+          "text": "constructivism.",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.48,
+          "eos": false,
+          "start": 19.76,
+          "tags": [],
+          "text": "Mine",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.2,
+          "eos": false,
+          "start": 20.24,
+          "tags": [],
+          "text": "is",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.47999999999606324,
+          "eos": false,
+          "start": 20.44,
+          "tags": [],
+          "text": "about",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.8400000000039367,
+          "eos": false,
+          "start": 20.91999999999606,
+          "tags": [],
+          "text": "communicative",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 21.76,
+          "tags": [],
+          "text": "language",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.31999999999606327,
+          "eos": false,
+          "start": 22.24,
+          "tags": [],
+          "text": "teaching",
+          "type": "word"
+        },
+        {
+          "confidence": 0.8199999928474426,
+          "duration": 0.7600000000039367,
+          "eos": true,
+          "start": 22.559999999996062,
+          "tags": [],
+          "text": "method.",
+          "type": "word"
+        }
+      ]
+    },
+    {
+      "duration": 15.2,
+      "language": "en-us",
+      "speaker": "6eca7ad5-571a-42de-a545-1be71ebbb774",
+      "start": 24.56,
+      "words": [
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 24.56,
+          "tags": [],
+          "text": "I",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.32,
+          "eos": false,
+          "start": 24.96,
+          "tags": [],
+          "text": "looked",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.32,
+          "eos": false,
+          "start": 25.28,
+          "tags": [],
+          "text": "for",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.6,
+          "eos": false,
+          "start": 25.6,
+          "tags": [],
+          "text": "some",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.52,
+          "eos": false,
+          "start": 26.48,
+          "tags": [],
+          "text": "learner",
+          "type": "word"
+        },
+        {
+          "confidence": 0.9700000286102295,
+          "duration": 0.56,
+          "eos": false,
+          "start": 27,
+          "tags": [],
+          "text": "centered",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 1.08,
+          "eos": false,
+          "start": 27.56,
+          "tags": [],
+          "text": "practices,",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.56,
+          "eos": false,
+          "start": 28.64,
+          "tags": [],
+          "text": "such",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.32,
+          "eos": false,
+          "start": 29.2,
+          "tags": [],
+          "text": "as",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.44,
+          "eos": false,
+          "start": 29.72,
+          "tags": [],
+          "text": "teaching",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.64,
+          "eos": false,
+          "start": 30.16,
+          "tags": [],
+          "text": "students",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.4,
+          "eos": false,
+          "start": 30.8,
+          "tags": [],
+          "text": "how",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.48,
+          "eos": false,
+          "start": 31.2,
+          "tags": [],
+          "text": "to",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.36,
+          "eos": false,
+          "start": 31.72,
+          "tags": [],
+          "text": "use",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.48,
+          "eos": false,
+          "start": 32.08,
+          "tags": [],
+          "text": "learning",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 1.08,
+          "eos": true,
+          "start": 32.56,
+          "tags": [],
+          "text": "strategies.",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.48,
+          "eos": false,
+          "start": 33.8,
+          "tags": [],
+          "text": "Very",
+          "type": "word"
+        },
+        {
+          "confidence": 1,
+          "duration": 0.64,
+          "eos": true,
+          "start": 34.28,
+          "tags": [],
+          "text": "good.",
+          "type": "word"
+        }
+      ]
+    }
+  ],
+  "speakers": [
+    {
+      "id": "6eca7ad5-571a-42de-a545-1be71ebbb774",
+      "name": "Unknown"
+    }
+  ]
+}
