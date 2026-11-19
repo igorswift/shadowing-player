@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#141716">
+<title>Кино · Shadowing Player</title>
+<style>
+  :root { color-scheme: dark; font: 100%/1.5 system-ui,sans-serif; background: #141716; color: #f5f6ee; --line: #414840; --muted: #b8c0b7; --accent: #daf8a4; }
+  * { box-sizing: border-box; }
+  body { margin: 0; }
+  main { width: min(100% - 32px, 960px); margin: 26px auto 36px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 18px; border-bottom: 1px solid var(--line); padding-bottom: 14px; margin-bottom: 24px; }
+  h1, h2, p { margin: 0; }
+  h1 { font-size: clamp(1.45rem, 5vw, 2rem); letter-spacing: -.035em; }
+  a { color: var(--accent); text-underline-offset: 4px; }
+  button, input { font: inherit; }
+  button { min-height: 44px; padding: 8px 14px; background: #222823; color: inherit; border: 1px solid var(--line); border-radius: 9px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--accent); }
+  button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  button:disabled { opacity: .5; cursor: default; }
+  .primary { background: var(--accent); color: #18200e; border-color: transparent; font-weight: 650; }
+  .muted, small { color: var(--muted); }
+  #setup { max-width: 640px; }
+  #setup > p { margin-bottom: 18px; }
+  .fields { display: grid; gap: 12px; }
+  label.field { display: grid; gap: 5px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; }
+  input[type=file] { width: 100%; color: var(--muted); }
+  input::file-selector-button { min-height: 36px; margin-right: 8px; padding-inline: 10px; border: 1px solid var(--line); border-radius: 6px; background: #222823; color: #f5f6ee; }
+  details { margin: 16px 0; }
+  details label { margin-top: 10px; }
+  summary { cursor: pointer; color: var(--muted); }
+  #feedback, #playerError { color: #ffd19a; }
+  #feedback:empty, #playerError:empty { display: none; }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .setup-actions { margin: 14px 0; }
+  #player { background: #1a1e1b; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  #player:fullscreen { display: flex; flex-direction: column; justify-content: center; padding: 0 max(12px, env(safe-area-inset-right)) env(safe-area-inset-bottom) max(12px, env(safe-area-inset-left)); background: #141716; overflow: auto; }
+  #player:fullscreen video { max-height: 68dvh; flex-shrink: 1; min-height: 0; }
+  video { display: block; width: 100%; max-height: 64dvh; aspect-ratio: 16 / 9; object-fit: contain; background: #080a09; }
+  .controls { padding: 12px; display: grid; gap: 10px; }
+  .time { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 8px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; margin: 0; height: 32px; accent-color: var(--accent); cursor: pointer; }
+  .review { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 8px; }
+  .review button[aria-pressed=true] { border-color: var(--accent); color: var(--accent); }
+  #translation { overflow-wrap: anywhere; color: var(--accent); }
+  #change { margin-left: auto; }
+  @media (max-width: 480px) {
+    main { width: min(100% - 20px, 960px); margin-top: 12px; }
+    .controls { padding: 10px; }
+    #change { margin-left: 0; }
+  }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Кино <small>· Shadowing Player</small></h1>
+    <a href="./index.html">Shadowing Player</a>
+  </header>
+
+  <section id="setup" aria-label="Загрузка фильма">
+    <p class="muted">Открой фильм и JSON с таймкодами. Смотри на английском и возвращайся к любой реплике.</p>
+    <div class="fields">
+      <label class="field">Фильм на английском <input id="movieFile" type="file" accept="video/*,.mp4,.m4v,.mov,.webm,.mkv"></label>
+      <label class="field">Таймкоды реплик <input id="transcriptFile" type="file" accept=".json,application/json"></label>
+    </div>
+    <details>
+      <summary>Подготовить JSON или добавить русский перевод</summary>
+      <label class="field">Русские субтитры к этой версии фильма (SRT) <input id="subtitleFile" type="file" accept=".srt"></label>
+      <small>Субтитры используются для сопоставления по времени. Перевод появится по кнопке RU.</small>
+      <div class="actions setup-actions"><button id="export" type="button" disabled>Скачать JSON с репликами</button></div>
+    </details>
+    <div class="actions setup-actions"><button class="primary" id="open" type="button" disabled>Открыть фильм</button></div>
+    <p id="feedback" role="status"></p>
+  </section>
+
+  <section id="player" aria-label="Видеоплеер" hidden>
+    <video id="video" playsinline preload="metadata" aria-label="Фильм"></video>
+    <div class="controls">
+      <div class="time"><span id="movieName"></span><span id="time"></span></div>
+      <input id="timeline" type="range" min="0" max="1" value="0" step="0.1" aria-label="Позиция фильма" disabled>
+      <div class="actions">
+        <button id="play" type="button">Смотреть</button>
+        <button class="primary" id="repeat" type="button" disabled>Повторить фразу</button>
+        <button id="fullscreen" type="button" hidden>На весь экран</button>
+        <button id="change" type="button">Выбрать файлы</button>
+      </div>
+      <div id="review" class="review" hidden>
+        <div class="time" id="phraseInfo" aria-live="polite"></div>
+        <div class="actions">
+          <button id="previous" type="button" aria-label="Предыдущая фраза">←</button>
+          <button id="again" type="button">Повторить</button>
+          <button id="next" type="button" aria-label="Следующая фраза">→</button>
+          <button id="ru" type="button" aria-label="Русский перевод" aria-pressed="false">RU</button>
+          <button class="primary" id="continue" type="button">Продолжить фильм</button>
+        </div>
+        <p id="translation" lang="ru" aria-live="polite" hidden></p>
+      </div>
+      <p id="playerError" role="status"></p>
+    </div>
+  </section>
+</main>
+<script>
+"use strict";
+
+const $ = id => document.getElementById(id);
+const video = $("video");
+const timeline = $("timeline");
+const player = $("player");
+const movieInput = $("movieFile");
+const transcriptInput = $("transcriptFile");
+const subtitleInput = $("subtitleFile");
+let phrases = [];
+let reviewIndex = -1;
+let reachedEnd = false;
+let objectUrl;
+let positionKey;
+let lastSavedAt = 0;
+let frame;
+let scrubbing = false;
+
+function premierePhrases(data) {
+  const results = [];
+  const translations = Array.isArray(data.translations) ? data.translations : [];
+  let translationIndex = 0;
+  let pending;
+  let previousSegmentSpeaker;
+  const close = () => {
+    if (!pending) return;
+    const { start, end, text, translated } = pending;
+    results.push({ start, end, en: text.join(" "), ...(translated.every(Boolean) && { ru: translated.join(" ") }) });
+    pending = undefined;
+  };
+  for (const segment of data.segments) {
+    const words = (segment?.words ?? []).filter(word =>
+      word?.type === "word" && typeof word.text === "string" && word.text.trim());
+    if (!words.length) continue;
+    const speaker = segment.speaker;
+    if (pending && ((speaker && previousSegmentSpeaker && speaker !== previousSegmentSpeaker) ||
+      words[0].start - pending.end >= 1.5)) close();
+    previousSegmentSpeaker = speaker;
+    for (const [index, word] of words.entries()) {
+      if (!Number.isFinite(word.start) || word.start < 0 || !Number.isFinite(word.duration) || word.duration < 0) {
+        throw new Error("В транскрипте Premiere есть неверные таймкоды слов.");
+      }
+      pending ??= { start: word.start, end: word.start, text: [], translated: [] };
+      pending.end = Math.max(pending.end, word.start + word.duration);
+      pending.text.push(word.text.trim());
+      if (word.eos || index === words.length - 1) {
+        const translation = translations[translationIndex++];
+        pending.translated.push(typeof translation === "string" ? translation.trim() : "");
+      }
+      if (word.eos) close();
+    }
+  }
+  close();
+  return results;
+}
+
+function parseTranscript(data) {
+  const entries = Array.isArray(data?.phrases) ? data.phrases :
+    Array.isArray(data?.segments) ? premierePhrases(data) : null;
+  if (!entries?.length) throw new Error("В JSON нет реплик. Выбери транскрипт Premiere или JSON из этого плеера.");
+  return entries.map((phrase, index) => {
+    const { start, end, en, ru } = phrase ?? {};
+    if (!Number.isFinite(start) || start < 0 || !Number.isFinite(end) || end <= start ||
+      typeof en !== "string" || !en.trim()) {
+      throw new Error(`Проверь текст и таймкод реплики №${index + 1}.`);
+    }
+    return { start, end, en: en.trim(), ...(typeof ru === "string" && ru.trim() && { ru: ru.trim() }) };
+  }).sort((a, b) => a.start - b.start);
+}
+
+function phraseAt(entries, time) {
+  let low = 0;
+  let high = entries.length;
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2);
+    if (entries[mid].start <= time) low = mid + 1;
+    else high = mid;
+  }
+  const latest = low - 1;
+  // Overlapping dialogue can leave an earlier line active after the latest one ends.
+  for (let index = latest; index >= 0 && entries[index].maxEnd > time; index--) {
+    if (entries[index].end > time) return index;
+  }
+  return latest;
+}
+
+function readSrt(text) {
+  const stamp = "(\\d{2,}):(\\d{2}):(\\d{2})[,.](\\d{3})";
+  const timing = new RegExp(`^${stamp}\\s*-->\\s*${stamp}(?:\\s.*)?$`);
+  const seconds = ([h, m, s, ms]) => Number(h) * 3600 + Number(m) * 60 + Number(s) + Number(ms) / 1000;
+  const cues = [];
+  for (const block of text.trim().split(/\r?\n[ \t]*\r?\n/)) {
+    const lines = block.split(/\r?\n/);
+    const index = lines.findIndex(line => timing.test(line.trim()));
+    if (index < 0) continue;
+    const times = lines[index].trim().match(timing);
+    const start = seconds(times.slice(1, 5));
+    const end = seconds(times.slice(5, 9));
+    const ru = lines.slice(index + 1).join(" ").replace(/<[^>]*>/g, "").trim();
+    if (ru && end > start) cues.push({ start, end, ru });
+  }
+  if (!cues.length) throw new Error("В SRT нет русских реплик с таймкодами.");
+  return cues.sort((a, b) => a.start - b.start);
+}
+
+function addSubtitles(entries, cues) {
+  const assigned = entries.map(() => []);
+  let first = 0;
+  for (const cue of cues) {
+    while (first < entries.length && entries[first].end <= cue.start) first++;
+    let mostOverlap = 0;
+    let best = -1;
+    for (let i = first; i < entries.length && entries[i].start < cue.end; i++) {
+      const overlap = Math.min(cue.end, entries[i].end) - Math.max(cue.start, entries[i].start);
+      if (overlap > mostOverlap) {
+        mostOverlap = overlap;
+        best = i;
+      }
+    }
+    if (best >= 0) assigned[best].push(cue.ru);
+  }
+  if (!assigned.some(lines => lines.length)) throw new Error("Таймкоды SRT не совпали с репликами. Проверь версию фильма.");
+  return entries.map((entry, index) => entry.ru || !assigned[index].length ? entry :
+    { ...entry, ru: assigned[index].join(" ") });
+}
+
+async function loadPhrases() {
+  const transcript = transcriptInput.files[0];
+  const subtitles = subtitleInput.files[0];
+  let data;
+  try {
+    data = JSON.parse(await transcript.text());
+  } catch {
+    throw new Error("Не удалось прочитать JSON с таймкодами.");
+  }
+  const entries = parseTranscript(data);
+  return subtitles ? addSubtitles(entries, readSrt(await subtitles.text())) : entries;
+}
+
+function formatTime(seconds) {
+  const total = Math.floor(seconds || 0);
+  const minutes = String(Math.floor(total / 60) % 60).padStart(2, "0");
+  const remainder = String(total % 60).padStart(2, "0");
+  return total >= 3600 ? `${Math.floor(total / 3600)}:${minutes}:${remainder}` : `${minutes}:${remainder}`;
+}
+
+function updateTimeline() {
+  if (scrubbing) return;
+  timeline.value = video.currentTime;
+  timeline.setAttribute("aria-valuetext", formatTime(video.currentTime));
+  $("time").textContent = `${formatTime(video.currentTime)} / ${formatTime(video.duration)}`;
+  $("repeat").disabled = phraseAt(phrases, video.currentTime) < 0;
+}
+
+function showReview() {
+  $("review").hidden = reviewIndex < 0;
+  if (reviewIndex < 0) return;
+  const phrase = phrases[reviewIndex];
+  $("phraseInfo").textContent = `Фраза ${reviewIndex + 1} из ${phrases.length} · ${formatTime(phrase.start)}`;
+  $("previous").disabled = reviewIndex === 0;
+  $("next").disabled = reviewIndex === phrases.length - 1;
+  $("ru").setAttribute("aria-pressed", "false");
+  $("translation").hidden = true;
+  $("translation").textContent = "";
+}
+
+function playVideo() {
+  $("playerError").textContent = "";
+  video.play().catch(error => {
+    if (error.name !== "AbortError") $("playerError").textContent = "Не удалось воспроизвести файл. Попробуй MP4 с английской дорожкой.";
+  });
+}
+
+function repeatPhrase(index) {
+  if (!phrases[index]) return;
+  savePosition(true);
+  reviewIndex = index;
+  reachedEnd = false;
+  showReview();
+  video.currentTime = phrases[index].start;
+  playVideo();
+}
+
+function continueMovie(shouldPlay) {
+  const end = reachedEnd && reviewIndex >= 0 ? phrases[reviewIndex].end : video.currentTime;
+  reviewIndex = -1;
+  reachedEnd = false;
+  showReview();
+  if (video.currentTime !== end) video.currentTime = end;
+  if (shouldPlay) playVideo();
+}
+
+function stopAtPhraseEnd() {
+  if (reviewIndex < 0 || reachedEnd || video.paused || video.seeking) return;
+  const end = phrases[reviewIndex].end;
+  if (video.currentTime < end) return;
+  reachedEnd = true;
+  video.pause();
+  if (video.currentTime > end) video.currentTime = end;
+}
+
+function tick() {
+  stopAtPhraseEnd();
+  if (!video.paused) frame = requestAnimationFrame(tick);
+}
+
+function savePosition(force = false) {
+  if (!positionKey || !Number.isFinite(video.duration) || reviewIndex >= 0 || video.seeking) return;
+  const now = Date.now();
+  if (!force && now - lastSavedAt < 3000) return;
+  lastSavedAt = now;
+  try {
+    localStorage.setItem(positionKey, String(video.ended ? 0 : video.currentTime));
+  } catch {
+    // Browser storage can be disabled or unavailable for locally opened pages.
+  }
+}
+
+function restorePosition() {
+  try {
+    return Number(localStorage.getItem(positionKey));
+  } catch {
+    return 0;
+  }
+}
+
+function refreshFileButtons() {
+  $("open").disabled = !(movieInput.files.length && transcriptInput.files.length);
+  $("export").disabled = !transcriptInput.files.length;
+}
+
+async function useTranscript(button, action) {
+  $("open").disabled = true;
+  $("export").disabled = true;
+  for (const input of [movieInput, transcriptInput, subtitleInput]) input.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  $("feedback").textContent = "";
+  try {
+    await action(await loadPhrases());
+  } catch (error) {
+    $("feedback").textContent = error.message;
+  } finally {
+    button.removeAttribute("aria-busy");
+    for (const input of [movieInput, transcriptInput, subtitleInput]) input.disabled = false;
+    refreshFileButtons();
+  }
+}
+
+function openMovie(entries) {
+  const file = movieInput.files[0];
+  phrases = entries;
+  reviewIndex = -1;
+  reachedEnd = false;
+  scrubbing = false;
+  lastSavedAt = 0;
+  positionKey = `shadowing-film:${file.name}:${file.size}:${file.lastModified}`;
+  objectUrl = URL.createObjectURL(file);
+  $("movieName").textContent = file.name;
+  $("playerError").textContent = "";
+  $("play").disabled = true;
+  $("repeat").disabled = true;
+  timeline.disabled = true;
+  $("setup").hidden = true;
+  player.hidden = false;
+  showReview();
+  video.src = objectUrl;
+}
+
+function closeMovie() {
+  savePosition(true);
+  if (document.fullscreenElement === player) document.exitFullscreen().catch(() => {});
+  video.pause();
+  video.removeAttribute("src");
+  video.load();
+  URL.revokeObjectURL(objectUrl);
+  positionKey = undefined;
+  player.hidden = true;
+  $("setup").hidden = false;
+  $("open").focus();
+}
+
+for (const input of [movieInput, transcriptInput, subtitleInput]) {
+  input.addEventListener("change", refreshFileButtons);
+}
+$("open").addEventListener("click", () => useTranscript($("open"), openMovie));
+$("export").addEventListener("click", () => useTranscript($("export"), entries => {
+  const json = JSON.stringify({ version: 1, phrases: entries }, null, 2);
+  const url = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${transcriptInput.files[0].name.replace(/\.json$/i, "")}.movie.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  $("feedback").textContent = `Реплик: ${entries.length}. С переводом: ${entries.filter(entry => entry.ru).length}.`;
+}));
+$("change").addEventListener("click", closeMovie);
+$("play").addEventListener("click", () => {
+  if (!video.paused) video.pause();
+  else if (reachedEnd) continueMovie(true);
+  else playVideo();
+});
+$("repeat").addEventListener("click", () => repeatPhrase(phraseAt(phrases, video.currentTime)));
+$("previous").addEventListener("click", () => repeatPhrase(reviewIndex - 1));
+$("again").addEventListener("click", () => repeatPhrase(reviewIndex));
+$("next").addEventListener("click", () => repeatPhrase(reviewIndex + 1));
+$("continue").addEventListener("click", () => continueMovie(true));
+$("ru").addEventListener("click", () => {
+  const translation = $("translation");
+  translation.hidden = !translation.hidden;
+  $("ru").setAttribute("aria-pressed", String(!translation.hidden));
+  translation.textContent = phrases[reviewIndex].ru || "Для этой реплики перевод не добавлен.";
+});
+
+if (document.fullscreenEnabled && player.requestFullscreen) {
+  $("fullscreen").hidden = false;
+  $("fullscreen").addEventListener("click", () => {
+    const change = document.fullscreenElement === player ? document.exitFullscreen() : player.requestFullscreen();
+    change.catch(() => { $("playerError").textContent = "Полноэкранный режим недоступен в этом браузере."; });
+  });
+  document.addEventListener("fullscreenchange", () => {
+    $("fullscreen").textContent = document.fullscreenElement === player ? "Выйти из полного экрана" : "На весь экран";
+  });
+}
+
+timeline.addEventListener("input", () => {
+  scrubbing = true;
+  const target = Number(timeline.value);
+  timeline.setAttribute("aria-valuetext", formatTime(target));
+  $("time").textContent = `${formatTime(target)} / ${formatTime(video.duration)}`;
+});
+timeline.addEventListener("change", () => {
+  const target = Number(timeline.value);
+  scrubbing = false;
+  continueMovie(false);
+  video.currentTime = target;
+  updateTimeline();
+});
+
+video.addEventListener("loadedmetadata", () => {
+  if (!Number.isFinite(video.duration) || video.duration <= 0) {
+    $("playerError").textContent = "Не удалось определить длительность фильма.";
+    return;
+  }
+  let maxEnd = 0;
+  phrases = phrases.filter(phrase => phrase.start < video.duration).map(phrase => {
+    const end = Math.min(phrase.end, video.duration);
+    maxEnd = Math.max(maxEnd, end);
+    return { ...phrase, end, maxEnd };
+  });
+  if (!phrases.length) $("playerError").textContent = "Таймкоды из JSON выходят за пределы фильма.";
+  const saved = restorePosition();
+  if (saved > 0 && saved < video.duration) video.currentTime = saved;
+  $("play").disabled = false;
+  timeline.max = video.duration;
+  timeline.disabled = false;
+  updateTimeline();
+});
+video.addEventListener("error", () => {
+  if (!player.hidden && video.getAttribute("src")) {
+    $("playerError").textContent = "Браузер не открыл этот файл. Попробуй MP4 (H.264 с AAC).";
+  }
+});
+video.addEventListener("play", () => {
+  $("play").textContent = "Пауза";
+  cancelAnimationFrame(frame);
+  frame = requestAnimationFrame(tick);
+});
+video.addEventListener("pause", () => {
+  $("play").textContent = "Смотреть";
+  cancelAnimationFrame(frame);
+  savePosition(true);
+});
+video.addEventListener("timeupdate", () => {
+  stopAtPhraseEnd();
+  updateTimeline();
+  savePosition();
+});
+video.addEventListener("seeked", () => {
+  updateTimeline();
+  savePosition(true);
+});
+video.addEventListener("ended", () => {
+  if (reviewIndex >= 0) reachedEnd = true;
+  savePosition(true);
+});
+window.addEventListener("pagehide", () => savePosition(true));
+refreshFileButtons();
+</script>
+</body>
+</html>
