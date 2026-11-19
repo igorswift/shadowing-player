@@ -4,11 +4,11 @@ android {
     namespace 'com.igorswift.shadowingplayer'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.igorswift.shadowingplayer.mobile13'
+        applicationId 'com.igorswift.shadowingplayer.mobile14'
         minSdk 26
         targetSdk 34
-        versionCode 4
-        versionName '1.3'
+        versionCode 5
+        versionName '1.4'
     }
     sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('generated/player-assets')
 }

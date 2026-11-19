@@ -228,6 +228,98 @@
     movie.currentTime = Number(seek.value);
     syncWatchPhrase();
   };
+  const cards = JSON.parse(localStorage.getItem("phrase-cards") || "[]");
+  function persist() { localStorage.setItem("phrase-cards",JSON.stringify(cards)); }
+  const requests = new Map();
+  window.androidCloudResult = (id, body) => {
+    const request = requests.get(id);
+    if (!request) return;
+    requests.delete(id);
+    try { const data=JSON.parse(body); if(data.error) throw Error(data.error); request.resolve(data); }
+    catch(error){request.reject(error);}
+  };
+  function cloud(data) {
+    return new Promise((resolve,reject)=>{
+      const id=crypto.randomUUID(); requests.set(id,{resolve,reject});
+      AndroidPlayer.cloud(id,JSON.stringify(data));
+    });
+  }
+  library.append(button("Настроить Google Sheets и перевод",()=>{
+    const url=prompt("Адрес веб-приложения Google Apps Script (/exec)");
+    if(!url) return;
+    const token=prompt("Код подключения PLAYER_TOKEN");
+    if(token && AndroidPlayer.configure(url.trim(),token.trim())) { status.textContent="Подключено. Проверяем очередь…"; syncCards(); }
+    else status.textContent="Проверьте адрес и код";
+  }));
+  const savedList=document.createElement("section");
+  library.append(button("Моё избранное",()=>{ savedList.hidden=!savedList.hidden; drawCards(); }),savedList);
+  savedList.hidden=true;
+  function drawCards(){
+    savedList.replaceChildren();
+    if (!cards.length) savedList.textContent="Здесь появятся сохранённые выражения";
+    for(const c of cards.slice().reverse()){
+      const p=document.createElement("p");
+      p.textContent=[c.target,c.translation,c.file+" · "+c.time,c.synced?"В Google Sheets":"Ожидает отправки"].filter(Boolean).join(" — ");
+      savedList.append(p);
+    }
+  }
+  let syncing=false;
+  async function syncCards(){
+    if(syncing || !AndroidPlayer.configured?.()) return;
+    syncing=true;
+    try {
+      for(const c of cards.filter(c=>!c.synced)){
+        await cloud({...c,action:"save"});
+        if(!c.translation){
+          c.translation=(await cloud({action:"translate",target:c.target,context:c.context})).translation;
+          persist(); await cloud({...c,action:"save"});
+        }
+        c.synced=true; persist();
+      }
+    }catch(error){status.textContent=String(error.message);}
+    finally{syncing=false;drawCards();}
+  }
+  window.addEventListener("online",syncCards);
+  setInterval(syncCards,60000);
+  function contextAt(index){return sentences.slice(Math.max(0,index-2),index+3).map(p=>p.text).join(" ");}
+  function saveCard(index,target,translation){
+    const p=sentences[index]; if(!p || !videoFile)return;
+    if(!cards.some(c=>c.file===videoFile.name && c.start===p.start && c.target===target)){
+      cards.push({id:crypto.randomUUID(),target,translation:translation||"",sentence:p.text,context:contextAt(index),
+        file:videoFile.name,start:p.start,time:format(p.start),date:new Date().toISOString(),synced:false});
+      persist();
+    }
+    syncCards();
+  }
+  $("transcriptList").addEventListener("click",e=>{
+    const star=e.target.closest('[aria-label="Toggle favorite"]');
+    if(!star)return;
+    for(const [index,row] of transcriptRows)if(row.contains(star)&&star.getAttribute("aria-pressed")==="true")saveCard(index,sentences[index].text,sentences[index].translation);
+  });
+  const saveBtn=button("★ Сохранить",()=>saveCard(currentIndex,sentences[currentIndex].text,sentences[currentIndex].translation));
+  saveBtn.className="tool-btn"; $("toolbarPractice").append(saveBtn);
+  const selectionBar=document.createElement("div"); selectionBar.hidden=true;
+  const selectionOutput=document.createElement("span"); let selectedPart=null;
+  const translatePart=button("Перевести",async()=>{
+    const part=selectedPart; if(!part)return;
+    try { part.translation=(await cloud({action:"translate",target:part.text,context:contextAt(part.index)})).translation;
+      if(part===selectedPart)selectionOutput.textContent=part.translation;
+    }catch(error){selectionOutput.textContent=error.message;}
+  });
+  const savePart=button("★ Сохранить",()=>{if(selectedPart)saveCard(selectedPart.index,selectedPart.text,selectedPart.translation);});
+  for(const b of [translatePart,savePart]){b.className="tool-btn";b.onpointerdown=e=>e.preventDefault();}
+  selectionBar.append(translatePart,savePart,selectionOutput); $("toolbarPractice").after(selectionBar);
+  const phraseArea=$("phraseText").closest(".phrase-area");
+  phraseArea.style.userSelect="text";phraseArea.style.webkitUserSelect="text";
+  phraseArea.addEventListener("contextmenu",e=>e.stopImmediatePropagation(),true);
+  document.addEventListener("selectionchange",()=>{
+    const s=getSelection(),node=s.anchorNode?.parentElement;
+    const box=node?.closest("#phraseText,[data-split-index]");
+    if(!box || !s.toString().trim() || !box.contains(s.focusNode))return;
+    selectedPart={index:box.dataset.splitIndex===undefined?currentIndex:Number(box.dataset.splitIndex),text:s.toString().trim()};
+    selectionBar.hidden=false;selectionOutput.textContent=selectedPart.text;
+  });
+  syncCards();
   const pending = new Map();
   const tokens = new Map();
   function attachTranslation(after, phrase) {
@@ -242,7 +334,11 @@
     const request = {phrase, node};
     pending.set(phrase, request);
     tokens.set(token, request);
-    AndroidPlayer.translate(phrase.text, token);
+    if(AndroidPlayer.configured?.()){
+      cloud({action:"translate",target:phrase.text,context:contextAt(sentences.indexOf(phrase))})
+        .then(r=>androidTranslated(token,r.translation,""))
+        .catch(()=>AndroidPlayer.translate(phrase.text,token));
+    }else AndroidPlayer.translate(phrase.text, token);
   }
   function renderTranslations() {
     document.querySelectorAll(".android-translation").forEach(node => node.remove());
@@ -267,7 +363,12 @@
   const updateAfter = action => (...args) => { action(...args); renderTranslations(); };
   activateSplit = updateAfter(activateSplit);
   deactivateSplit = updateAfter(deactivateSplit);
-  showPhrase = updateAfter(showPhrase);
+  const baseShow=showPhrase;
+  let shown=-1;
+  showPhrase = updateAfter(index=>{
+    if(shown!==index){translationVisible=false;selectionBar.hidden=true;selectedPart=null;}
+    shown=index;baseShow(index);
+  });
   toggleTranslation = updateAfter(() => { translationVisible = !translationVisible; androidSaveProgress(); });
   renderLibrary();
 })();

@@ -142,7 +142,47 @@ public class MainActivity extends Activity {
             notifyPage(request == 1 ? "androidVideoChosen" : "androidJsonChosen", fileName(uri));
         } catch (Exception e) { notifyPage("androidError", e.getMessage() == null ? "Cannot access file" : e.getMessage()); }
     }
+    private final java.util.concurrent.ExecutorService cloudWorker = java.util.concurrent.Executors.newSingleThreadExecutor();
     public class Bridge {
+        @JavascriptInterface public boolean configure(String url,String token) {
+            if (!url.matches("https://script\\.google\\.com/macros/s/[A-Za-z0-9_-]+/exec") || token.length()<16) return false;
+            getPreferences(MODE_PRIVATE).edit().putString("cloudUrl",url).putString("cloudToken",token).apply();
+            return true;
+        }
+        @JavascriptInterface public boolean configured() { return getPreferences(MODE_PRIVATE).contains("cloudUrl"); }
+        @JavascriptInterface public void cloud(String id,String payload) {
+            cloudWorker.execute(()->{
+                String result;
+                java.net.HttpURLConnection conn=null;
+                try {
+                    if (!configured()) throw new IOException();
+                    JSONObject data=new JSONObject(payload);
+                    data.put("token",getPreferences(MODE_PRIVATE).getString("cloudToken",""));
+                    conn=(java.net.HttpURLConnection)new java.net.URL(getPreferences(MODE_PRIVATE).getString("cloudUrl","")).openConnection();
+                    conn.setInstanceFollowRedirects(false);
+                    conn.setConnectTimeout(15000); conn.setReadTimeout(45000);
+                    conn.setRequestMethod("POST"); conn.setDoOutput(true);
+                    conn.setRequestProperty("Content-Type","application/json");
+                    try(OutputStream out=conn.getOutputStream()){out.write(data.toString().getBytes("UTF-8"));}
+                    int code=conn.getResponseCode();
+                    if(code==302 || code==303){
+                        java.net.URL location=new java.net.URL(conn.getHeaderField("Location"));
+                        if(!"https".equals(location.getProtocol()) || !"script.googleusercontent.com".equals(location.getHost())) throw new IOException();
+                        conn.disconnect(); conn=(java.net.HttpURLConnection)location.openConnection();
+                        conn.setConnectTimeout(15000);conn.setReadTimeout(45000);
+                    }
+                    try(BufferedReader reader=new BufferedReader(new InputStreamReader(conn.getInputStream(),"UTF-8"))){
+                        StringBuilder body=new StringBuilder(); String line;
+                        while((line=reader.readLine())!=null && body.length()<64000) body.append(line);
+                        result=new JSONObject(body.toString()).toString();
+                    }
+                } catch(Exception e){ result="{\"error\":\"Проверьте подключение и настройки Apps Script\"}"; }
+                finally { if(conn!=null)conn.disconnect(); }
+                final String value=result;
+                runOnUiThread(()->web.evaluateJavascript("androidCloudResult("+JSONObject.quote(id)+","+JSONObject.quote(value)+")",null));
+            });
+        }
+
         @JavascriptInterface public String list() { return library().toString(); }
         @JavascriptInterface public void chooseVideo() { runOnUiThread(() -> pick("*/*", 1)); }
         @JavascriptInterface public void chooseJson() { runOnUiThread(() -> pick("*/*", 2)); }

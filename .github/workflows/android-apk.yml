@@ -36,18 +36,18 @@ jobs:
       - name: Verify APK
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-build/app/build/outputs/apk/debug/app-debug.apk
-          cp android-build/app/build/outputs/apk/debug/app-debug.apk ShadowingPlayer-1.3.apk
+          cp android-build/app/build/outputs/apk/debug/app-debug.apk ShadowingPlayer-1.4.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ShadowingPlayer-1.3
-          path: ShadowingPlayer-1.3.apk
+          name: ShadowingPlayer-1.4
+          path: ShadowingPlayer-1.4.apk
       - name: Publish APK
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view android-v1.3 >/dev/null 2>&1; then
-            gh release upload android-v1.3 ShadowingPlayer-1.3.apk --clobber
+          if gh release view android-v1.4 >/dev/null 2>&1; then
+            gh release upload android-v1.4 ShadowingPlayer-1.4.apk --clobber
           else
-            gh release create android-v1.3 ShadowingPlayer-1.3.apk --title 'Shadowing Player Android 1.3' --notes 'Touch playback controls and translations for every split phrase.' --target "$GITHUB_SHA"
+            gh release create android-v1.4 ShadowingPlayer-1.4.apk --title 'Shadowing Player Android 1.4' --notes 'Phrase cards, on-demand cloud translation and Google Sheets sync.' --target "$GITHUB_SHA"
           fi
