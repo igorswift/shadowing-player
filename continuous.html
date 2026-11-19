@@ -222,6 +222,26 @@
   .ctrl-btn .ctrl-icon { font-size: 20px; }
   .ctrl-btn.accent-btn { background: var(--accent-dim); color: var(--accent); }
 
+  .player-main { display:flex; flex-direction:column; min-width:0; min-height:0; flex:1; }
+  .transcript-toggle { margin-left:auto; }
+  .player-screen.mirrored .transcript-panel { display:none !important; }
+  .transcript-panel { display:none; flex-direction:column; min-width:0; min-height:0; background:var(--bg); border-left:1px solid var(--surface2); }
+  .transcript-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:16px; }
+  .transcript-heading h2 { font-size:18px; }
+  .transcript-search { margin:0 16px 10px; padding:10px 12px; border:1px solid var(--text-muted); border-radius:10px; background:var(--surface); color:var(--text); font:inherit; min-width:0; }
+  .transcript-options { display:flex; gap:8px; padding:0 16px 10px; align-items:center; }
+  .transcript-list { overflow:auto; flex:1; min-height:0; overscroll-behavior:contain; padding:0 10px 16px; }
+  .transcript-row { display:flex; gap:10px; align-items:baseline; padding:12px 8px; border-bottom:1px solid var(--surface2); }
+  .transcript-row.current { background:var(--accent-dim); border-radius:8px; }
+  .transcript-line { text-align:left; display:flex; gap:10px; flex:1; min-width:0; color:var(--text); font:inherit; background:none; border:0; cursor:pointer; }
+  .transcript-line time { color:var(--text-dim); font:12px 'JetBrains Mono',monospace; flex-shrink:0; }
+  .transcript-row.current time { color:var(--accent); }
+  .transcript-star { background:none; border:0; color:var(--text-dim); font-size:20px; cursor:pointer; }
+  .transcript-star.saved { color:var(--accent); }
+  .transcript-empty { padding:16px; color:var(--text-dim); }
+  @media (max-width: 899px) {
+    .player-screen.transcript-open .transcript-panel { display:flex; position:fixed; inset:0; z-index:50; }
+  }
   @media (min-width: 768px) { .player-screen { max-width: 480px; margin: 0 auto; } .phrase-text { font-size: 24px; } }
   input[type="file"] { display: none; }
 
@@ -239,6 +259,15 @@
   .cd-progress-fill.cd-done-fill { background: var(--red); }
 
   /* Mirror mode */
+  @media (min-width: 900px) {
+    .player-screen.active { max-width:1800px; width:100%; flex-direction:row; margin:0 auto; }
+    .player-main { flex:1 1 65%; }
+    .player-screen:not(.transcript-collapsed) .transcript-panel { display:flex; flex:0 0 35%; }
+    .video-wrap video { max-height:48dvh; }
+    .phrase-area { padding:20px 32px; }
+    .phrase-text { font-size:clamp(28px,2.4vw,44px); }
+    .controls { padding:12px 32px 24px; }
+  }
   .player-screen.mirrored { transform: scaleY(-1); }
   .player-screen.mirrored .phrase-text { font-size: 26px; }
   .player-screen.mirrored .split-next { font-size: 26px; }
@@ -340,6 +369,7 @@
 </div>
 
 <div class="player-screen" id="player">
+  <div class="player-main">
   <div class="session-bar" onclick="openHistory()">
     <div class="session-left">
       <span class="session-timer" id="sessionTimer">00:00</span>
@@ -350,6 +380,7 @@
       <div class="session-stat"><span class="session-stat-val" id="sessionRecs">0</span><span class="session-stat-lbl">recs</span></div>
     </div>
     <button class="session-history-btn" onclick="event.stopPropagation(); openHistory()">history</button>
+    <button class="session-history-btn transcript-toggle" onclick="event.stopPropagation(); toggleTranscript()">Transcript</button>
   </div>
   <div class="video-wrap">
     <video id="video" playsinline></video>
@@ -404,6 +435,13 @@
     <button class="ctrl-btn" id="splitLockBtn" onclick="toggleSplitLock()"><span class="ctrl-icon">🔒</span><span id="splitLockLabel">Lock</span></button>
     <button class="ctrl-btn accent-btn" onclick="nextPhrase()"><span class="ctrl-icon">⏭</span>Next</button>
   </div>
+  </div>
+  <aside class="transcript-panel" id="transcriptPanel" aria-label="Transcript">
+    <div class="transcript-heading"><h2>Transcript</h2><button class="tool-btn" onclick="toggleTranscript()">Close</button></div>
+    <input class="transcript-search" id="transcriptSearch" type="search" placeholder="Search phrases…" aria-label="Search phrases" oninput="renderTranscript()">
+    <div class="transcript-options"><button class="tool-btn active" id="followBtn" onclick="toggleFollow()">Follow ✓</button><button class="tool-btn" id="favoritesBtn" onclick="toggleFavorites()">★ Favorites</button></div>
+    <div class="transcript-list" id="transcriptList"></div>
+  </aside>
 </div>
 
 <script>
@@ -762,6 +800,7 @@ function startPlayer() {
       document.getElementById('pauseIcon').textContent = '⏸'; document.getElementById('pauseLabel').textContent = 'Pause'; }
   });
 
+  initTranscript();
   const startWatching = !autoPauseEnabled && playerMode === "practice";
   currentIndex = 0; showPhrase(currentIndex); playPhrase(currentIndex);
   if (startWatching) setWatchMode(true);
@@ -774,6 +813,8 @@ function setBadge(t, c) { const b = document.getElementById('pauseBadge'); b.tex
 function hideBadge() { document.getElementById('pauseBadge').className = 'pause-badge'; }
 
 function showPhrase(idx) {
+  if (transcriptSource !== sentences) renderTranscript();
+  updateTranscriptHighlight(idx);
   const s = sentences[idx];
   // Clear split mode
   splitMode = false;
@@ -816,6 +857,112 @@ function showPhrase(idx) {
 function getSpeed() {
   if (playerMode === 'record') return parseFloat(document.getElementById('speedSlider').value);
   return speeds[speedIndex];
+}
+
+let transcriptSource = null;
+let transcriptRows = new Map();
+let activeTranscriptRow = null;
+let followTranscript = true;
+let favoritesOnly = false;
+let favoriteKeys = new Set();
+let favoriteStorageKey = "";
+
+function initTranscript() {
+  favoriteStorageKey = "shadowing-favorites:" + videoFile.name + ":" + videoFile.size;
+  try { favoriteKeys = new Set(JSON.parse(localStorage.getItem(favoriteStorageKey) || "[]")); }
+  catch { favoriteKeys = new Set(); }
+  renderTranscript();
+}
+
+function phraseKey(phrase) { return phrase.start + ":" + phrase.text; }
+
+function toggleTranscript() {
+  const player = document.getElementById("player");
+  if (window.innerWidth >= 900) player.classList.toggle("transcript-collapsed");
+  else player.classList.toggle("transcript-open");
+  updateTranscriptHighlight(currentIndex);
+}
+
+function toggleFollow() {
+  followTranscript = !followTranscript;
+  const button = document.getElementById("followBtn");
+  button.textContent = followTranscript ? "Follow ✓" : "Follow";
+  button.classList.toggle("active", followTranscript);
+  updateTranscriptHighlight(currentIndex);
+}
+
+function toggleFavorites() {
+  favoritesOnly = !favoritesOnly;
+  document.getElementById("favoritesBtn").classList.toggle("active", favoritesOnly);
+  renderTranscript();
+}
+
+function renderTranscript() {
+  transcriptSource = sentences;
+  const list = document.getElementById("transcriptList");
+  const query = document.getElementById("transcriptSearch").value.trim().toLowerCase();
+  list.replaceChildren();
+  transcriptRows = new Map();
+  activeTranscriptRow = null;
+  const fragment = document.createDocumentFragment();
+  sentences.forEach((phrase, index) => {
+    const key = phraseKey(phrase);
+    if (favoritesOnly && !favoriteKeys.has(key)) return;
+    if (query && !phrase.text.toLowerCase().includes(query)) return;
+    const row = document.createElement("div");
+    row.className = "transcript-row";
+    const button = document.createElement("button");
+    button.className = "transcript-line";
+    const time = document.createElement("time");
+    const seconds = Math.floor(phrase.start);
+    time.textContent = Math.floor(seconds / 60) + ":" + String(seconds % 60).padStart(2, "0");
+    const text = document.createElement("span");
+    text.textContent = phrase.text;
+    button.append(time, text);
+    button.addEventListener("click", () => {
+      currentIndex = index;
+      loopCount = 0;
+      showPhrase(index);
+      playPhrase(index);
+      document.getElementById("player").classList.remove("transcript-open");
+    });
+    const star = document.createElement("button");
+    star.className = "transcript-star";
+    star.setAttribute("aria-label", "Toggle favorite");
+    const updateStar = () => {
+      const saved = favoriteKeys.has(key);
+      star.textContent = saved ? "★" : "☆";
+      star.classList.toggle("saved", saved);
+      star.setAttribute("aria-pressed", String(saved));
+    };
+    updateStar();
+    star.addEventListener("click", () => {
+      if (favoriteKeys.has(key)) favoriteKeys.delete(key);
+      else favoriteKeys.add(key);
+      try { localStorage.setItem(favoriteStorageKey, JSON.stringify([...favoriteKeys])); } catch {}
+      if (favoritesOnly) renderTranscript();
+      else updateStar();
+    });
+    row.append(button, star);
+    fragment.append(row);
+    transcriptRows.set(index, row);
+  });
+  if (!transcriptRows.size) {
+    const empty = document.createElement("p");
+    empty.className = "transcript-empty";
+    empty.textContent = "No matching phrases";
+    fragment.append(empty);
+  }
+  list.append(fragment);
+  updateTranscriptHighlight(currentIndex);
+}
+
+function updateTranscriptHighlight(index) {
+  if (activeTranscriptRow) activeTranscriptRow.classList.remove("current");
+  activeTranscriptRow = transcriptRows.get(index);
+  if (!activeTranscriptRow) return;
+  activeTranscriptRow.classList.add("current");
+  if (followTranscript && activeTranscriptRow.offsetParent) activeTranscriptRow.scrollIntoView({block:"nearest", inline:"nearest"});
 }
 
 function setWatchMode(watching) {
@@ -1319,6 +1466,8 @@ document.addEventListener('visibilitychange', () => {
 });
 
 document.addEventListener('keydown', (e) => {
+  if (e.target && ['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  if (e.key === 'Escape') document.getElementById('player').classList.remove('transcript-open');
   if (document.getElementById('aboutPanel').classList.contains('open')) { if (e.key === 'Escape') closeAbout(); return; }
   if (document.getElementById('historyPanel').classList.contains('open')) { if (e.key === 'Escape') closeHistory(); return; }
   if (!document.getElementById('player').classList.contains('active')) return;
