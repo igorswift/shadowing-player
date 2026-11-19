@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
     private static final String ORIGIN = "https://" + HOST;
     private WebView web;
     private Translator translator;
-    private Uri pendingMedia, pendingJson;
+    private volatile Uri pendingMedia, pendingJson, playbackDocument;
     private PermissionRequest microphone;
     private final Map<String, String> translations = new HashMap<>();
 
@@ -47,11 +47,11 @@ public class MainActivity extends Activity {
             }
             @Override public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest req) {
                 Uri url = req.getUrl();
+                if (url.toString().startsWith("blob:" + ORIGIN + "/")) return null;
                 if (!HOST.equals(url.getHost()) || !"https".equals(url.getScheme())) {
                     return new WebResourceResponse("text/plain", "UTF-8", 403, "Forbidden",
                         Collections.emptyMap(), new ByteArrayInputStream(new byte[0]));
                 }
-                if (url.getPath().startsWith("/media/")) return mediaResponse(req);
                 return loader.shouldInterceptRequest(url);
             }
             @Override public void onPageFinished(WebView view, String url) {
@@ -61,6 +61,14 @@ public class MainActivity extends Activity {
             }
         });
         web.setWebChromeClient(new WebChromeClient() {
+            @Override public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback, FileChooserParams params) {
+                Uri file = playbackDocument;
+                playbackDocument = null;
+                boolean allowed = (ORIGIN + "/assets/continuous.html").equals(view.getUrl())
+                        && file != null && "content".equals(file.getScheme());
+                callback.onReceiveValue(allowed ? new Uri[]{file} : null);
+                return true;
+            }
             @Override public void onPermissionRequest(PermissionRequest request) {
                 runOnUiThread(() -> {
                     if (!ORIGIN.equals(request.getOrigin().toString()) && !(ORIGIN + "/").equals(request.getOrigin().toString())) {
@@ -134,79 +142,12 @@ public class MainActivity extends Activity {
             notifyPage(request == 1 ? "androidVideoChosen" : "androidJsonChosen", fileName(uri));
         } catch (Exception e) { notifyPage("androidError", e.getMessage() == null ? "Cannot access file" : e.getMessage()); }
     }
-    private WebResourceResponse mediaResponse(WebResourceRequest request) {
-        AssetFileDescriptor afd = null;
-        try {
-            JSONObject row = item(request.getUrl().getLastPathSegment());
-            Uri uri = Uri.parse(row.getString("media"));
-            afd = getContentResolver().openAssetFileDescriptor(uri, "r");
-            if (afd == null) throw new IOException("File unavailable");
-            long length = afd.getLength();
-            long start = 0, end = length - 1;
-            String range = null;
-            for (Map.Entry<String,String> header : request.getRequestHeaders().entrySet())
-                if ("Range".equalsIgnoreCase(header.getKey())) range = header.getValue();
-            boolean partial = range != null && length >= 0;
-            if (partial) {
-                if (!range.matches("bytes=\\d*-\\d*")) throw new IOException("Unsupported range");
-                String[] parts = range.substring(6).split("-", -1);
-                if (parts[0].isEmpty()) start = Math.max(0, length - Long.parseLong(parts[1]));
-                else {
-                    start = Long.parseLong(parts[0]);
-                    if (!parts[1].isEmpty()) end = Math.min(end, Long.parseLong(parts[1]));
-                }
-                if (start > end || start >= length) {
-                    afd.close();
-                    return new WebResourceResponse("text/plain", null, 416, "Range Not Satisfiable",
-                        Collections.singletonMap("Content-Range","bytes */"+length),new ByteArrayInputStream(new byte[0]));
-                }
-            }
-            InputStream stream = afd.createInputStream();
-            // AssetFileDescriptor streams start at the asset offset and close the underlying descriptor.
-            long left = start;
-            while (left > 0) {
-                long skipped = stream.skip(left);
-                if (skipped > 0) left -= skipped;
-                else if (stream.read() == -1) throw new EOFException();
-                else left--;
-            }
-            long count = length >= 0 ? end - start + 1 : Long.MAX_VALUE;
-            InputStream limited = new FilterInputStream(stream) {
-                long remaining = count;
-                @Override public int read() throws IOException {
-                    if (remaining == 0) return -1;
-                    int value = super.read(); if (value >= 0) remaining--; return value;
-                }
-                @Override public int read(byte[] bytes, int offset, int size) throws IOException {
-                    if (remaining == 0) return -1;
-                    int read = super.read(bytes, offset, (int)Math.min(size,remaining)); if (read > 0) remaining -= read; return read;
-                }
-            };
-            Map<String,String> headers = new HashMap<>();
-            if (length >= 0) { headers.put("Accept-Ranges","bytes"); headers.put("Content-Length",Long.toString(count)); }
-            if (partial) headers.put("Content-Range","bytes "+start+"-"+end+"/"+length);
-            String mime = row.getString("type");
-            if (!mime.startsWith("video/") && !mime.startsWith("audio/")) {
-                String name = row.getString("name");
-                String extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
-                String inferred = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
-                if (inferred != null) mime = inferred;
-            }
-            return new WebResourceResponse(mime, null, partial ? 206 : 200,
-                partial ? "Partial Content" : "OK",headers,limited);
-        } catch (Exception e) {
-            if (afd != null) try { afd.close(); } catch (IOException ignored) {}
-            return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",
-                Collections.emptyMap(),new ByteArrayInputStream(new byte[0]));
-        }
-    }
-
     public class Bridge {
         @JavascriptInterface public String list() { return library().toString(); }
         @JavascriptInterface public void chooseVideo() { runOnUiThread(() -> pick("*/*", 1)); }
         @JavascriptInterface public void chooseJson() { runOnUiThread(() -> pick("*/*", 2)); }
-        @JavascriptInterface public void openSelected() { runOnUiThread(() -> {
-            if (pendingMedia == null || pendingJson == null) return;
+        @JavascriptInterface public String openSelected() {
+            if (pendingMedia == null || pendingJson == null) return "";
             try {
                 JSONObject row = new JSONObject();
                 row.put("id", UUID.randomUUID().toString());
@@ -217,9 +158,20 @@ public class MainActivity extends Activity {
                 JSONArray rows = library();
                 rows.put(row); saveLibrary(rows);
                 pendingMedia = pendingJson = null;
-                notifyPage("androidLibraryChanged", row.getString("id"));
-            } catch (Exception e) { notifyPage("androidError", "Не удалось открыть выбранные файлы"); }
-        }); }
+                return row.getString("id");
+            } catch (Exception e) { return ""; }
+        }
+        @JavascriptInterface public boolean preparePlayback(String id) {
+            playbackDocument = null;
+            try {
+                Uri uri = Uri.parse(item(id).getString("media"));
+                try (AssetFileDescriptor afd = getContentResolver().openAssetFileDescriptor(uri, "r")) {
+                    if (afd == null) return false;
+                }
+                playbackDocument = uri;
+                return true;
+            } catch (Exception e) { return false; }
+        }
         @JavascriptInterface public String transcript(String id) {
             try (InputStream in = getContentResolver().openInputStream(Uri.parse(item(id).getString("json")))) {
                 if (in == null) throw new IOException("Transcript unavailable");

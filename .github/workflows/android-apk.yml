@@ -34,18 +34,18 @@ jobs:
       - name: Verify APK
         run: |
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose android-build/app/build/outputs/apk/debug/app-debug.apk
-          cp android-build/app/build/outputs/apk/debug/app-debug.apk ShadowingPlayer-1.1.apk
+          cp android-build/app/build/outputs/apk/debug/app-debug.apk ShadowingPlayer-1.2.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: ShadowingPlayer-1.1
-          path: ShadowingPlayer-1.1.apk
+          name: ShadowingPlayer-1.2
+          path: ShadowingPlayer-1.2.apk
       - name: Publish APK
         if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if gh release view android-v1.1 >/dev/null 2>&1; then
-            gh release upload android-v1.1 ShadowingPlayer-1.1.apk --clobber
+          if gh release view android-v1.2 >/dev/null 2>&1; then
+            gh release upload android-v1.2 ShadowingPlayer-1.2.apk --clobber
           else
-            gh release create android-v1.1 ShadowingPlayer-1.1.apk --title 'Shadowing Player Android 1.1' --notes 'Separate JSON and media pickers. Bundled demo removed.' --target "$GITHUB_SHA"
+            gh release create android-v1.2 ShadowingPlayer-1.2.apk --title 'Shadowing Player Android 1.2' --notes 'Plays the selected Android document through a file-backed blob URL.' --target "$GITHUB_SHA"
           fi

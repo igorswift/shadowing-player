@@ -39,7 +39,11 @@
   }
   const media = button("Выбрать видео или аудио", () => AndroidPlayer.chooseVideo());
   const json = button("Выбрать JSON", () => AndroidPlayer.chooseJson());
-  const open = button("Открыть в плеере", () => AndroidPlayer.openSelected());
+  const open = button("Открыть в плеере", () => {
+    const id = AndroidPlayer.openSelected();
+    if (id) androidLibraryChanged(id);
+    else androidError("Не удалось открыть выбранные файлы.");
+  });
   open.disabled = true;
   function selected(element, name) {
     element.dataset.selected = "1";
@@ -95,16 +99,31 @@
       list.append(row);
     }
   }
-  const objectUrl = URL.createObjectURL.bind(URL);
-  URL.createObjectURL = file => file?.nativeMediaId ? "/media/" + encodeURIComponent(file.nativeMediaId) : objectUrl(file);
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.hidden = true;
+  setup.append(fileInput);
   function openEntry(entry) {
+    if (!AndroidPlayer.preparePlayback(entry.id)) {
+      androidError("Нет доступа к файлу «" + entry.name + "». Выберите его снова в этом профиле Android.");
+      return;
+    }
+    fileInput.value = "";
+    fileInput.onchange = () => {
+      const file = fileInput.files[0];
+      if (file && file.size > 0) playDocument(entry, file);
+      else androidError("Android вернул пустой файл.");
+    };
+    fileInput.click();
+  }
+  function playDocument(entry, file) {
     try {
       const data = JSON.parse(AndroidPlayer.transcript(entry.id));
       sentences = parseTranscript(data);
       if (!sentences.length) throw new Error("No phrases found in JSON");
       rawJsonData = data;
       currentMedia = entry;
-      videoFile = {name:entry.name, type:entry.type, size:entry.id, nativeMediaId:entry.id};
+      videoFile = file;
       const saved = loadSettings(entry.id);
       if (Number.isInteger(saved.speed) && saved.speed >= 0 && saved.speed < speeds.length) speedIndex = saved.speed;
       textVisible = saved.textVisible !== false;
@@ -122,7 +141,7 @@
       video.addEventListener("pause", androidSaveProgress);
       video.addEventListener("seeked", androidSaveProgress);
       video.addEventListener("ratechange", androidSaveProgress);
-      video.addEventListener("error", () => alert("Unable to play this file. Try MP4 with H.264 video and AAC audio."));
+      video.addEventListener("error", () => alert("Не удалось воспроизвести «" + file.name + "». Код " + video.error?.code + ". " + (video.error?.message || "")));
     } catch (error) { androidError(error.message); }
   }
   window.androidSaveProgress = function() {
