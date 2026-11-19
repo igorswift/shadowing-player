@@ -1,0 +1,32 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.igorswift.shadowingplayer'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'com.igorswift.shadowingplayer'
+        minSdk 26
+        targetSdk 34
+        versionCode 1
+        versionName '1.0'
+    }
+    sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('generated/player-assets')
+}
+
+tasks.register('copyPlayer', Copy) {
+    from(rootProject.file('../continuous.html')) {
+        filter { line ->
+            line.replace('>${text} </span>', '>${escapePlayerText(text)} </span>')
+                .replace('html += ns.text;', 'html += escapePlayerText(ns.text);')
+                .replace('// ===== STATS =====', 'function escapePlayerText(value) { return String(value).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" })[c]); }\n// ===== STATS =====')
+        }
+    }
+    from(rootProject.file('../demo')) { into 'demo' }
+    into layout.buildDirectory.dir('generated/player-assets')
+}
+tasks.named('preBuild').configure { dependsOn 'copyPlayer' }
+
+dependencies {
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'com.google.mlkit:translate:17.0.3'
+}
