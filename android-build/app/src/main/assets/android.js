@@ -168,30 +168,106 @@
       openEntry(entry);
     }
   };
-  function translateCurrent() {
-    if (!translationVisible || !sentences[currentIndex]) return;
-    const phrase = sentences[currentIndex];
-    const display = $("phraseTranslation");
-    if (phrase.translation) {
-      display.textContent = phrase.translation;
-      display.style.display = "";
-      return;
-    }
-    translationRequest++;
-    const token = translationRequest + ":" + currentIndex;
-    display.textContent = "Translating… First use downloads the language model.";
-    display.style.display = "";
+  const mobileStyle = document.createElement("style");
+  mobileStyle.textContent = `
+    #loopBtn,#recBtn,#shadowBtn,#mirrorBtn,#toolbarRecord,#takesArea,.countdown-presets,
+    .cd-progress,#cdDisplay,.session-stat:has(#sessionRecs),#progressBar { display:none!important }
+    .countdown-bar { display:contents }
+    .session-bar { flex-wrap:wrap; gap:5px; padding:6px 10px }
+    .session-left { gap:6px } .session-history-btn { color:#bcc2d0 }
+    @media(max-width:500px){.session-today{display:none}}
+    .controls { padding:6px 6px max(8px,env(safe-area-inset-bottom)); }
+    .controls .ctrl-btn { min-width:0; min-height:48px; display:grid; grid-template-rows:23px 14px;
+      justify-items:center; align-content:center; align-items:center; gap:3px; padding:6px 0; font-size:11px; line-height:14px }
+    .controls .ctrl-icon { display:grid; place-items:center; width:100%; height:23px; font:18px/1 sans-serif }
+    .android-translation { color:#d4f4e6; font-size:clamp(16px,4vw,20px); line-height:1.45; margin:4px 0 10px; }
+    .tap-feedback { position:absolute; inset:50% auto auto 50%; transform:translate(-50%,-50%); pointer-events:none;
+      border-radius:50%; background:#10131bd9; color:white; width:48px; height:48px; display:grid; place-items:center; opacity:0 }
+    .video-wrap { touch-action:manipulation }
+    .movie-seek { width:100%; height:36px; flex:none; margin:0; touch-action:none; accent-color:var(--accent); cursor:pointer }
+    @media(max-height:480px){.video-wrap video{max-height:22dvh}.controls{padding-block:2px}.toolbar{padding-block:2px}}
+  `;
+  document.head.append(mobileStyle);
+  $("toolbarPractice").append($("bufferBtn"));
+  const wrap = document.querySelector(".video-wrap");
+  const feedback = document.createElement("span");
+  feedback.className = "tap-feedback";
+  feedback.setAttribute("aria-hidden","true");
+  wrap.append(feedback);
+  wrap.onclick = () => {
+    if (!video) return;
+    const resume = video.paused;
+    if (resume) isPausedByUser = true;
+    togglePause();
+    feedback.textContent = resume ? "▶" : "Ⅱ";
+    feedback.getAnimations().forEach(animation => animation.cancel());
+    feedback.animate([{opacity:0.95,scale:"0.94"},{opacity:0,scale:"1.05"}],
+      {duration:matchMedia("(prefers-reduced-motion: reduce)").matches ? 80 : 320});
+  };
+  const seek = document.createElement("input");
+  seek.type = "range";
+  seek.className = "movie-seek";
+  seek.setAttribute("aria-label","Позиция в фильме");
+  seek.min = "0"; seek.step = "any"; seek.value = "0"; seek.disabled = true;
+  $("progressBar").after(seek);
+  const movie = $("video");
+  function syncTimeline() {
+    seek.disabled = !(Number.isFinite(movie.duration) && movie.duration > 0);
+    if (!seek.disabled) { seek.max = movie.duration; seek.value = movie.currentTime; }
+  }
+  let dragging = false;
+  for (const name of ["durationchange","timeupdate","seeked"]) {
+    movie.addEventListener(name, () => { if (!dragging) syncTimeline(); });
+  }
+  seek.onpointerdown = () => { dragging = true; };
+  for (const name of ["pointerup","pointercancel","lostpointercapture"]) {
+    seek.addEventListener(name, () => { dragging = false; });
+  }
+  seek.oninput = () => {
+    if (seek.disabled) return;
+    movie.currentTime = Number(seek.value);
+    syncWatchPhrase();
+  };
+  const pending = new Map();
+  const tokens = new Map();
+  function attachTranslation(after, phrase) {
+    const node = document.createElement("div");
+    node.className = "android-translation";
+    after.after(node);
+    if (phrase.translation) { node.textContent = phrase.translation; return; }
+    node.textContent = "Перевод…";
+    const existing = pending.get(phrase);
+    if (existing) { existing.node = node; return; }
+    const token = String(++translationRequest);
+    const request = {phrase, node};
+    pending.set(phrase, request);
+    tokens.set(token, request);
     AndroidPlayer.translate(phrase.text, token);
   }
+  function renderTranslations() {
+    document.querySelectorAll(".android-translation").forEach(node => node.remove());
+    $("phraseTranslation").style.display = "none";
+    $("ruBtn").classList.toggle("accent-btn", translationVisible);
+    if (!translationVisible || !sentences[currentIndex]) return;
+    attachTranslation($("phraseText"), sentences[currentIndex]);
+    if (splitMode) {
+      for (const block of $("splitNext").querySelectorAll("[data-split-index]")) {
+        attachTranslation(block, sentences[Number(block.dataset.splitIndex)]);
+      }
+    }
+  }
   window.androidTranslated = (token, russian, error) => {
-    if (token !== translationRequest + ":" + currentIndex || !translationVisible) return;
-    if (russian) sentences[currentIndex].translation = russian;
-    $("phraseTranslation").textContent = russian || error;
-    $("phraseTranslation").style.display = "";
+    const request = tokens.get(String(token));
+    if (!request) return;
+    tokens.delete(String(token));
+    pending.delete(request.phrase);
+    if (russian) request.phrase.translation = russian;
+    request.node.textContent = russian || error || "Перевод недоступен";
   };
-  const originalShowPhrase = showPhrase;
-  showPhrase = index => { originalShowPhrase(index); translateCurrent(); };
-  const originalToggleTranslation = toggleTranslation;
-  toggleTranslation = () => { originalToggleTranslation(); translateCurrent(); androidSaveProgress(); };
+  const updateAfter = action => (...args) => { action(...args); renderTranslations(); };
+  activateSplit = updateAfter(activateSplit);
+  deactivateSplit = updateAfter(deactivateSplit);
+  showPhrase = updateAfter(showPhrase);
+  toggleTranslation = updateAfter(() => { translationVisible = !translationVisible; androidSaveProgress(); });
   renderLibrary();
 })();

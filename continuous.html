@@ -1077,6 +1077,7 @@ function activateSplit() {
   for (let i = currentIndex + 1; i <= lastIdx; i++) {
     if (i > currentIndex + 1) html += '<div style="border-top:1px solid var(--surface2); margin:8px 0;"></div>';
     const ns = sentences[i];
+    html += '<div data-split-index="' + i + '">';
     if (ns.words && ns.words.length) {
       html += ns.words.map((w, wi) => {
         const key = i + '-' + wi;
@@ -1086,6 +1087,7 @@ function activateSplit() {
     } else {
       html += ns.text;
     }
+    html += '</div>';
   }
   splitEl.innerHTML = html;
   splitEl.style.display = '';

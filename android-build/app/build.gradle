@@ -4,11 +4,11 @@ android {
     namespace 'com.igorswift.shadowingplayer'
     compileSdk 35
     defaultConfig {
-        applicationId 'com.igorswift.shadowingplayer.localmedia'
+        applicationId 'com.igorswift.shadowingplayer.mobile13'
         minSdk 26
         targetSdk 34
-        versionCode 3
-        versionName '1.2'
+        versionCode 4
+        versionName '1.3'
     }
     sourceSets.main.assets.srcDirs += layout.buildDirectory.dir('generated/player-assets')
 }
@@ -16,6 +16,7 @@ android {
 tasks.register('copyPlayer', Copy) {
     from(rootProject.file('../continuous.html')) {
         filter { line ->
+            if (line.trim() in ["case 'l': toggleLoop(); break;", "case 'r': handleRec(); break;", "case 'w': handleShadow(); break;", "case 'p': toggleMirror(); break;"]) return null
             line.replace('>${text} </span>', '>${escapePlayerText(text)} </span>')
                 .replace('html += ns.text;', 'html += escapePlayerText(ns.text);')
                 .replace('// ===== STATS =====', 'function escapePlayerText(value) { return String(value).replace(/[&<>]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;" })[c]); }\n// ===== STATS =====')
