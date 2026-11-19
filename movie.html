@@ -3,10 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#141716">
+<meta name="theme-color" content="#0a0a0f">
 <title>Кино · Shadowing Player</title>
 <style>
-  :root { color-scheme: dark; font: 100%/1.5 system-ui,sans-serif; background: #141716; color: #f5f6ee; --line: #414840; --muted: #b8c0b7; --accent: #daf8a4; }
+  :root { color-scheme: dark; font: 100%/1.5 "DM Sans",system-ui,sans-serif; background: #0a0a0f; color: #e8e8ed; --line: #3a3a4a; --muted: #8c8c9d; --accent: #6ee7b7; }
   * { box-sizing: border-box; }
   body { margin: 0; }
   main { width: min(100% - 32px, 960px); margin: 26px auto 36px; }
@@ -40,6 +40,9 @@
   video { display: block; width: 100%; max-height: 64dvh; aspect-ratio: 16 / 9; object-fit: contain; background: #080a09; }
   .screen { position: relative; }
   #captions { position: absolute; bottom: 6%; left: 5%; width: 90%; margin: 0; text-align: center; pointer-events: none; font-size: clamp(1rem, 3vw, 1.65rem); line-height: 1.4; }
+  #captionText { pointer-events: auto; }
+  .caption-word { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+  .caption-word:hover, .caption-word:focus-visible { text-decoration: underline; text-decoration-color: var(--accent); text-underline-offset: .15em; }
   #captionText { color: #fff; background: rgba(0,0,0,.8); padding: .15em .35em; box-decoration-break: clone; -webkit-box-decoration-break: clone; overflow-wrap: anywhere; }
   #player:fullscreen .screen { min-height: 0; flex-shrink: 1; }
   .controls { padding: 12px; display: grid; gap: 10px; }
@@ -73,6 +76,33 @@
     input[type=range] { height: 24px; }
     #change { margin-left: auto; }
   }
+  body.watching #player { background: #0a0a0f; border: 0; }
+  body.watching .screen { flex: 1 1 45%; }
+  body.watching .controls { display: flex; flex-direction: column; flex: 1 1 55%; min-height: 0; max-height: none; overflow: hidden; gap: 8px; }
+  .controls > * { flex-shrink: 0; }
+  .controls .phrase-area { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+  #captions { position: static; width: 100%; margin: 0; text-align: left; pointer-events: auto; font-size: clamp(1.1rem, 3vw, 1.8rem); }
+  #captionText { background: none; padding: 0; color: #e8e8ed; }
+  .caption-line + .caption-line { border-top: 1px solid #1e1e2e; margin-top: 12px; padding-top: 12px; }
+  button, input::file-selector-button { background: #14141f; color: #e8e8ed; border-color: #3a3a4a; }
+  .primary { background: #2d4a3e; color: #6ee7b7; border-color: #6ee7b7; }
+  .actions > button, .speed-controls button { border-radius: 24px; font-size: .8rem; min-height: 34px; padding: 4px 12px; }
+  .transport { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-radius: 20px; overflow: hidden; }
+  .transport button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; border-radius: 0; border: 0; border-right: 1px solid #0a0a0f; min-height: 72px; padding: 7px 2px; font-size: .75rem; }
+  .transport .icon { font-size: 1.3rem; line-height: 1.3; }
+  .transport button[aria-pressed=true] { background: #2d4a3e; color: #6ee7b7; }
+  #phraseInfo, #speed, .time { font-family: "JetBrains Mono",monospace; font-size: .75rem; }
+  #translation { margin-top: 10px; }
+  @media (max-height: 500px) and (orientation: landscape) {
+    body.watching #player { flex-direction: row; }
+    body.watching .screen { flex: 1 1 55%; }
+    body.watching .controls { flex: 1 1 45%; padding: 6px; }
+    .transport button { min-height: 52px; }
+    .actions { gap: 4px; }
+    .actions > button, .speed-controls button { min-height: 30px; padding: 2px 8px; }
+    #movieName { display: none; }
+  }
+  .controls .caption-word { display: inline; min-height: 0; padding: 0; border: 0; border-radius: 0; background: transparent; color: inherit; font: inherit; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -102,33 +132,35 @@
   <section id="player" aria-label="Видеоплеер" hidden>
     <div class="screen">
       <video id="video" playsinline preload="metadata" aria-label="Фильм"></video>
-      <p id="captions" lang="en" hidden><span id="captionText"></span></p>
     </div>
     <div class="controls">
       <div class="time"><span id="movieName"></span><span id="time"></span></div>
-      <input id="timeline" type="range" min="0" max="1" value="0" step="0.1" aria-label="Позиция фильма" disabled>
       <div class="actions">
-        <button id="play" type="button">Смотреть</button>
-        <button class="primary" id="repeat" type="button" disabled>Повторить фразу</button>
-        <button id="en" type="button" aria-label="Английские субтитры" aria-pressed="true">EN</button>
         <div class="speed-controls" role="group" aria-label="Скорость воспроизведения">
           <button id="slower" type="button" aria-label="Уменьшить скорость">−</button>
           <output id="speed" aria-live="polite">1×</output>
           <button id="faster" type="button" aria-label="Увеличить скорость">+</button>
         </div>
+        <button id="repeat" type="button" disabled>Разобрать фразу</button>
+        <button id="en" type="button" aria-label="Английские субтитры" aria-pressed="true">EN</button>
+        <button id="ru" type="button" aria-label="Русский перевод" aria-pressed="false">RU</button>
         <button id="fullscreen" type="button" hidden>На весь экран</button>
-        <button id="change" type="button">Выбрать файлы</button>
+        <button id="change" type="button">Файлы</button>
       </div>
-      <div id="review" class="review">
-        <div class="time" id="phraseInfo" aria-live="polite"></div>
-        <div class="actions">
-          <button id="previous" type="button" aria-label="Предыдущая фраза">←</button>
-          <button id="again" type="button">Повторить</button>
-          <button id="next" type="button" aria-label="Следующая фраза">→</button>
-          <button id="ru" type="button" aria-label="Русский перевод" aria-pressed="false">RU</button>
-          <button class="primary" id="continue" type="button">Продолжить фильм</button>
-        </div>
+      <input id="timeline" type="range" min="0" max="1" value="0" step="0.1" aria-label="Позиция фильма" disabled>
+      <div class="time" id="phraseInfo" aria-live="polite"></div>
+      <div class="phrase-area">
+        <p id="captions" lang="en" hidden><span id="captionText"></span></p>
         <p id="translation" lang="ru" aria-live="polite" hidden></p>
+      </div>
+      <div class="actions"><button class="primary" id="continue" type="button">Продолжить фильм</button></div>
+      <div id="review" class="transport">
+        <button id="previous" type="button" aria-label="Предыдущая фраза"><span class="icon" aria-hidden="true">⏮</span>Prev</button>
+        <button id="again" type="button"><span class="icon" aria-hidden="true">↻</span>Replay</button>
+        <button id="play" type="button"><span class="icon" aria-hidden="true">▶</span><span id="playLabel">Play</span></button>
+        <button id="split" type="button" aria-pressed="false"><span class="icon" aria-hidden="true">⛓</span><span id="splitLabel">Split</span></button>
+        <button id="lock" type="button" aria-pressed="false"><span class="icon" aria-hidden="true">🔒</span><span id="lockLabel">Lock</span></button>
+        <button id="next" type="button" aria-label="Следующая фраза"><span class="icon" aria-hidden="true">⏭</span>Next</button>
       </div>
       <p id="wakeStatus" role="status"></p>
       <p id="playerError" role="status"></p>
@@ -148,6 +180,11 @@ const subtitleInput = $("subtitleFile");
 let phrases = [];
 let reviewIndex = -1;
 let reachedEnd = false;
+let wordPlayback;
+let renderedCaption;
+let splitCount = 0;
+let splitLock = false;
+let reviewLastIndex = -1;
 let objectUrl;
 let positionKey;
 let lastSavedAt = 0;
@@ -169,8 +206,8 @@ function premierePhrases(data) {
   let previousSegmentSpeaker;
   const close = () => {
     if (!pending) return;
-    const { start, end, text, translated } = pending;
-    results.push({ start, end, en: text.join(" "), ...(translated.every(Boolean) && { ru: translated.join(" ") }) });
+    const { start, end, text, translated, words } = pending;
+    results.push({ start, end, words, en: text.join(" "), ...(translated.every(Boolean) && { ru: translated.join(" ") }) });
     pending = undefined;
   };
   for (const segment of data.segments) {
@@ -185,9 +222,10 @@ function premierePhrases(data) {
       if (!Number.isFinite(word.start) || word.start < 0 || !Number.isFinite(word.duration) || word.duration < 0) {
         throw new Error("В транскрипте Premiere есть неверные таймкоды слов.");
       }
-      pending ??= { start: word.start, end: word.start, text: [], translated: [] };
+      pending ??= { start: word.start, end: word.start, text: [], translated: [], words: [] };
       pending.end = Math.max(pending.end, word.start + word.duration);
       pending.text.push(word.text.trim());
+      pending.words.push({ text: word.text.trim(), start: word.start, end: word.start + word.duration });
       if (word.eos || index === words.length - 1) {
         const translation = translations[translationIndex++];
         pending.translated.push(typeof translation === "string" ? translation.trim() : "");
@@ -209,7 +247,13 @@ function parseTranscript(data) {
       typeof en !== "string" || !en.trim()) {
       throw new Error(`Проверь текст и таймкод реплики №${index + 1}.`);
     }
-    return { start, end, en: en.trim(), ...(typeof ru === "string" && ru.trim() && { ru: ru.trim() }) };
+    const words = Array.isArray(phrase.words) ? phrase.words.filter(word =>
+      typeof word?.text === "string" && word.text.trim() &&
+      Number.isFinite(word.start) && Number.isFinite(word.end) &&
+      word.start >= start && word.end > word.start && word.end <= end
+    ).map(word => ({ text: word.text.trim(), start: word.start, end: word.end }))
+      .sort((a, b) => a.start - b.start) : [];
+    return { start, end, ...(words.length && { words }), en: en.trim(), ...(typeof ru === "string" && ru.trim() && { ru: ru.trim() }) };
   }).sort((a, b) => a.start - b.start);
 }
 
@@ -291,10 +335,55 @@ function formatTime(seconds) {
 
 function updateCaptions() {
   const index = reviewIndex >= 0 ? reviewIndex : phraseAt(phrases, video.currentTime);
+  const last = reviewIndex >= 0 ? reviewLastIndex : index;
   const phrase = phrases[index];
   const active = phrase && (reviewIndex >= 0 || video.currentTime < phrase.end);
   $("captions").hidden = !captionsVisible || !active;
-  $("captionText").textContent = active ? phrase.en : "";
+  const key = `${index}:${last}`;
+  if (renderedCaption === key) return;
+  renderedCaption = key;
+  const text = $("captionText");
+  text.replaceChildren();
+  for (let phraseIndex = index; phraseIndex >= 0 && phraseIndex <= last; phraseIndex++) {
+    const entry = phrases[phraseIndex];
+    if (!entry) continue;
+    const line = document.createElement("span");
+    line.className = "caption-line";
+    line.style.display = "block";
+    if (!entry.words?.length) line.textContent = entry.en;
+    else for (const [wordIndex, word] of entry.words.entries()) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "caption-word";
+      button.textContent = word.text;
+      button.title = "Прослушать слово";
+      button.addEventListener("click", event => {
+        event.stopPropagation();
+        playWord(phraseIndex, wordIndex);
+      });
+      line.append(button, " ");
+    }
+    text.append(line);
+  }
+}
+
+function playWord(index, wordIndex) {
+  const phrase = phrases[index];
+  const word = phrase?.words?.[wordIndex];
+  if (!word || timeline.disabled) return;
+  savePosition(true);
+  reviewIndex = index;
+  reviewLastIndex = index;
+  reachedEnd = false;
+  wordPlayback = {
+    start: Math.max(0, word.start - 0.08),
+    end: Math.min(video.duration, word.end + 0.06, phrase.words[wordIndex + 1]?.start ?? Infinity)
+  };
+  // Overlapping words can start before the preceding word has finished.
+  wordPlayback.end = Math.max(word.end, wordPlayback.end);
+  showReview();
+  video.currentTime = wordPlayback.start;
+  playVideo();
 }
 
 function updateTimeline() {
@@ -321,13 +410,20 @@ function showReview() {
     ? `Фраза ${index + 1} из ${phrases.length} · ${formatTime(phrase.start)}`
     : "До первой реплики";
   $("previous").disabled = !ready || index === 0;
-  $("next").disabled = timeline.disabled || !phrases[index + 1];
+  $("next").disabled = timeline.disabled || !phrases[(reviewIndex >= 0 ? reviewLastIndex : index) + 1];
+  $("split").disabled = !ready;
+  $("lock").disabled = !ready;
+  $("splitLabel").textContent = splitCount ? `Split: ${splitCount}` : "Split";
+  $("split").setAttribute("aria-pressed", String(splitCount > 0));
+  $("lockLabel").textContent = splitLock ? "Lock ✓" : "Lock";
+  $("lock").setAttribute("aria-pressed", String(splitLock));
   $("again").disabled = !ready;
   $("ru").disabled = !ready;
   $("continue").disabled = timeline.disabled;
   $("ru").setAttribute("aria-pressed", String(translationVisible));
   $("translation").hidden = !translationVisible || !ready;
-  $("translation").textContent = phrase?.ru || "Для этой реплики перевод не добавлен.";
+  const last = reviewIndex >= 0 ? reviewLastIndex : index;
+  $("translation").textContent = phrases.slice(Math.max(0, index), last + 1).map(entry => entry.ru || "Для этой реплики перевод не добавлен.").join(" / ");
 }
 
 function changeSpeed(delta) {
@@ -385,20 +481,23 @@ function playVideo() {
   });
 }
 
-function repeatPhrase(index) {
+function repeatPhrase(index, count = splitLock ? splitCount : 1) {
   if (!phrases[index]) return;
   savePosition(true);
   reviewIndex = index;
   reachedEnd = false;
+  wordPlayback = undefined;
+  reviewLastIndex = Math.min(index + Math.max(1, count) - 1, phrases.length - 1);
   showReview();
   video.currentTime = phrases[index].start;
   playVideo();
 }
 
 function continueMovie(shouldPlay) {
-  const end = reachedEnd && reviewIndex >= 0 ? phrases[reviewIndex].end : video.currentTime;
+  const end = reachedEnd && reviewIndex >= 0 ? wordPlayback?.end ?? phrases[reviewLastIndex].end : video.currentTime;
   reviewIndex = -1;
   reachedEnd = false;
+  wordPlayback = undefined;
   showReview();
   if (video.currentTime !== end) video.currentTime = end;
   if (shouldPlay) playVideo();
@@ -406,7 +505,7 @@ function continueMovie(shouldPlay) {
 
 function stopAtPhraseEnd() {
   if (reviewIndex < 0 || reachedEnd || video.paused || video.seeking) return;
-  const end = phrases[reviewIndex].end;
+  const end = wordPlayback?.end ?? phrases[reviewLastIndex].end;
   if (video.currentTime < end) return;
   reachedEnd = true;
   video.pause();
@@ -463,6 +562,8 @@ async function useTranscript(button, action) {
 function openMovie(entries) {
   const file = movieInput.files[0];
   phrases = entries;
+  renderedCaption = undefined;
+  reviewLastIndex = -1;
   reviewIndex = -1;
   reachedEnd = false;
   scrubbing = false;
@@ -521,15 +622,31 @@ $("en").addEventListener("click", () => {
   $("en").setAttribute("aria-pressed", String(captionsVisible));
   updateCaptions();
 });
-$("play").addEventListener("click", () => {
+function togglePlayback() {
+  if ($("play").disabled) return;
   if (!video.paused) video.pause();
   else if (reachedEnd) continueMovie(true);
   else playVideo();
-});
+}
+$("play").addEventListener("click", togglePlayback);
+video.addEventListener("click", togglePlayback);
 $("repeat").addEventListener("click", () => repeatPhrase(phraseAt(phrases, video.currentTime)));
-$("previous").addEventListener("click", () => repeatPhrase(selectedPhraseIndex() - 1));
-$("again").addEventListener("click", () => repeatPhrase(selectedPhraseIndex()));
-$("next").addEventListener("click", () => repeatPhrase(selectedPhraseIndex() + 1));
+$("previous").addEventListener("click", () => {
+  if (reviewIndex >= 0 && reviewLastIndex > reviewIndex && !splitLock) repeatPhrase(reviewIndex, 1);
+  else repeatPhrase(Math.max(0, selectedPhraseIndex() - (splitLock ? Math.max(1, splitCount) : 1)));
+});
+$("again").addEventListener("click", () => repeatPhrase(selectedPhraseIndex(), reviewIndex >= 0 ? reviewLastIndex - reviewIndex + 1 : 1));
+$("next").addEventListener("click", () => repeatPhrase((reviewIndex >= 0 ? reviewLastIndex : selectedPhraseIndex()) + 1));
+$("split").addEventListener("click", () => {
+  splitCount = splitCount === 0 ? 2 : splitCount === 2 ? 3 : 0;
+  if (!splitCount) splitLock = false;
+  repeatPhrase(selectedPhraseIndex(), splitCount || 1);
+});
+$("lock").addEventListener("click", () => {
+  splitLock = !splitLock;
+  if (splitLock && !splitCount) splitCount = 2;
+  repeatPhrase(selectedPhraseIndex(), splitLock ? splitCount : 1);
+});
 $("continue").addEventListener("click", () => continueMovie(true));
 $("ru").addEventListener("click", () => {
   translationVisible = !translationVisible;
@@ -595,12 +712,14 @@ video.addEventListener("error", () => {
   }
 });
 video.addEventListener("play", () => {
-  $("play").textContent = "Пауза";
+  $("playLabel").textContent = "Pause";
+  $("play").querySelector(".icon").textContent = "⏸";
   cancelAnimationFrame(frame);
   frame = requestAnimationFrame(tick);
 });
 video.addEventListener("pause", () => {
-  $("play").textContent = "Смотреть";
+  $("playLabel").textContent = "Play";
+  $("play").querySelector(".icon").textContent = "▶";
   cancelAnimationFrame(frame);
   savePosition(true);
 });
