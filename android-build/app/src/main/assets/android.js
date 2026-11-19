@@ -22,6 +22,7 @@
     .android-library-item small { display:block; color:var(--accent); margin-top:5px; }
     .android-library-row button:last-child { color:var(--text-dim); }
     .android-add { width:100%; padding:14px; border:0; border-radius:12px; background:var(--accent); color:var(--bg); font:inherit; font-weight:bold; }
+    .android-add:disabled { opacity:.4; }
     .setup-screen { justify-content:flex-start; }
     #androidStatus { color:var(--accent); }
   `;
@@ -29,18 +30,33 @@
   const setup = $("setup");
   const library = document.createElement("section");
   library.className = "android-library";
-  const add = document.createElement("button");
-  add.className = "android-add";
-  add.textContent = "+ Add film or audio + JSON";
-  add.onclick = () => AndroidPlayer.add();
+  function button(label, action) {
+    const element = document.createElement("button");
+    element.className = "android-add";
+    element.textContent = label;
+    element.onclick = action;
+    return element;
+  }
+  const media = button("Выбрать видео или аудио", () => AndroidPlayer.chooseVideo());
+  const json = button("Выбрать JSON", () => AndroidPlayer.chooseJson());
+  const open = button("Открыть в плеере", () => AndroidPlayer.openSelected());
+  open.disabled = true;
+  function selected(element, name) {
+    element.dataset.selected = "1";
+    element.textContent = (element === media ? "Видео / аудио · " : "JSON · ") + name;
+    open.disabled = !(media.dataset.selected && json.dataset.selected);
+  }
+  window.androidVideoChosen = name => selected(media, name);
+  window.androidJsonChosen = name => selected(json, name);
   const status = document.createElement("p");
   status.id = "androidStatus";
   const list = document.createElement("div");
   list.className = "android-library";
-  library.append(add, status, list);
+  library.append(media, json, open, status, list);
   setup.insertBefore(library, $("demoBtn"));
   document.querySelectorAll(".own-files,.setup-divider,.own-files-toggle").forEach(el => el.style.display = "none");
-  // The existing demo remains bundled and available offline.
+  $("demoBtn").remove();
+  document.querySelector(".demo-hint")?.remove();
   $("videoPicker").style.display = "none";
   $("jsonPicker").style.display = "none";
   $("videoInput").style.display = "none";
@@ -124,7 +140,14 @@
   window.androidLibraryChanged = id => {
     renderLibrary();
     const entry = JSON.parse(AndroidPlayer.list()).find(row => row.id === id);
-    if (entry) openEntry(entry);
+    if (entry) {
+      delete media.dataset.selected;
+      delete json.dataset.selected;
+      media.textContent = "Выбрать видео или аудио";
+      json.textContent = "Выбрать JSON";
+      open.disabled = true;
+      openEntry(entry);
+    }
   };
   function translateCurrent() {
     if (!translationVisible || !sentences[currentIndex]) return;

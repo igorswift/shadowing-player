@@ -23,7 +23,7 @@ public class MainActivity extends Activity {
     private static final String ORIGIN = "https://" + HOST;
     private WebView web;
     private Translator translator;
-    private Uri pendingMedia;
+    private Uri pendingMedia, pendingJson;
     private PermissionRequest microphone;
     private final Map<String, String> translations = new HashMap<>();
 
@@ -123,26 +123,15 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
         if (result != RESULT_OK || data == null || data.getData() == null) {
-            pendingMedia = null; return;
+            return;
         }
         Uri uri = data.getData();
         try {
             getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-            if (request == 1) {
-                pendingMedia = uri;
-                pick("*/*", 2);
-            } else if (request == 2 && pendingMedia != null) {
-                JSONObject row = new JSONObject();
-                row.put("id", UUID.randomUUID().toString());
-                row.put("name", fileName(pendingMedia));
-                row.put("type", Optional.ofNullable(getContentResolver().getType(pendingMedia)).orElse("video/mp4"));
-                row.put("media", pendingMedia.toString());
-                row.put("json", uri.toString());
-                JSONArray rows = library();
-                rows.put(row); saveLibrary(rows);
-                pendingMedia = null;
-                notifyPage("androidLibraryChanged", row.getString("id"));
-            }
+            if (request == 1) pendingMedia = uri;
+            else if (request == 2) pendingJson = uri;
+            else return;
+            notifyPage(request == 1 ? "androidVideoChosen" : "androidJsonChosen", fileName(uri));
         } catch (Exception e) { notifyPage("androidError", e.getMessage() == null ? "Cannot access file" : e.getMessage()); }
     }
     private WebResourceResponse mediaResponse(WebResourceRequest request) {
@@ -196,7 +185,14 @@ public class MainActivity extends Activity {
             Map<String,String> headers = new HashMap<>();
             if (length >= 0) { headers.put("Accept-Ranges","bytes"); headers.put("Content-Length",Long.toString(count)); }
             if (partial) headers.put("Content-Range","bytes "+start+"-"+end+"/"+length);
-            return new WebResourceResponse(row.getString("type"), null, partial ? 206 : 200,
+            String mime = row.getString("type");
+            if (!mime.startsWith("video/") && !mime.startsWith("audio/")) {
+                String name = row.getString("name");
+                String extension = name.substring(name.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+                String inferred = MimeTypeMap.getSingleton().getMimeTypeFromExtension(extension);
+                if (inferred != null) mime = inferred;
+            }
+            return new WebResourceResponse(mime, null, partial ? 206 : 200,
                 partial ? "Partial Content" : "OK",headers,limited);
         } catch (Exception e) {
             if (afd != null) try { afd.close(); } catch (IOException ignored) {}
@@ -207,7 +203,23 @@ public class MainActivity extends Activity {
 
     public class Bridge {
         @JavascriptInterface public String list() { return library().toString(); }
-        @JavascriptInterface public void add() { runOnUiThread(() -> pick("*/*",1)); }
+        @JavascriptInterface public void chooseVideo() { runOnUiThread(() -> pick("*/*", 1)); }
+        @JavascriptInterface public void chooseJson() { runOnUiThread(() -> pick("*/*", 2)); }
+        @JavascriptInterface public void openSelected() { runOnUiThread(() -> {
+            if (pendingMedia == null || pendingJson == null) return;
+            try {
+                JSONObject row = new JSONObject();
+                row.put("id", UUID.randomUUID().toString());
+                row.put("name", fileName(pendingMedia));
+                row.put("type", Optional.ofNullable(getContentResolver().getType(pendingMedia)).orElse("video/mp4"));
+                row.put("media", pendingMedia.toString());
+                row.put("json", pendingJson.toString());
+                JSONArray rows = library();
+                rows.put(row); saveLibrary(rows);
+                pendingMedia = pendingJson = null;
+                notifyPage("androidLibraryChanged", row.getString("id"));
+            } catch (Exception e) { notifyPage("androidError", "Не удалось открыть выбранные файлы"); }
+        }); }
         @JavascriptInterface public String transcript(String id) {
             try (InputStream in = getContentResolver().openInputStream(Uri.parse(item(id).getString("json")))) {
                 if (in == null) throw new IOException("Transcript unavailable");
