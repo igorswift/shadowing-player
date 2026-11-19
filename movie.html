@@ -54,6 +54,25 @@
     .controls { padding: 10px; }
     #change { margin-left: 0; }
   }
+  body.watching main { margin: 0 auto; height: 100dvh; width: min(100%, 960px); display: flex; flex-direction: column; }
+  body.watching header { display: none; }
+  body.watching #player { display: flex; flex-direction: column; height: 100%; border-radius: 0; }
+  body.watching .screen { flex: 1 1 0; min-height: 0; }
+  body.watching video, #player:fullscreen video { height: 100%; max-height: none; }
+  body.watching .controls { flex: 0 0 auto; max-height: 70dvh; overflow-y: auto; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  #player:fullscreen { height: 100dvh; width: 100%; justify-content: flex-start; overflow: hidden; }
+  #movieName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 65%; }
+  .speed-controls { display: inline-flex; align-items: center; gap: 4px; }
+  #speed { min-width: 3.8em; text-align: center; font-variant-numeric: tabular-nums; }
+  #wakeStatus { color: var(--muted); font-size: .8rem; }
+  #wakeStatus:empty { display: none; }
+  @media (max-height: 500px) and (orientation: landscape) {
+    .controls { gap: 4px; padding: 4px 10px; }
+    .review { gap: 4px; padding-top: 4px; }
+    .controls button { min-height: 36px; padding: 4px 10px; }
+    input[type=range] { height: 24px; }
+    #change { margin-left: auto; }
+  }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -92,10 +111,15 @@
         <button id="play" type="button">Смотреть</button>
         <button class="primary" id="repeat" type="button" disabled>Повторить фразу</button>
         <button id="en" type="button" aria-label="Английские субтитры" aria-pressed="true">EN</button>
+        <div class="speed-controls" role="group" aria-label="Скорость воспроизведения">
+          <button id="slower" type="button" aria-label="Уменьшить скорость">−</button>
+          <output id="speed" aria-live="polite">1×</output>
+          <button id="faster" type="button" aria-label="Увеличить скорость">+</button>
+        </div>
         <button id="fullscreen" type="button" hidden>На весь экран</button>
         <button id="change" type="button">Выбрать файлы</button>
       </div>
-      <div id="review" class="review" hidden>
+      <div id="review" class="review">
         <div class="time" id="phraseInfo" aria-live="polite"></div>
         <div class="actions">
           <button id="previous" type="button" aria-label="Предыдущая фраза">←</button>
@@ -106,6 +130,7 @@
         </div>
         <p id="translation" lang="ru" aria-live="polite" hidden></p>
       </div>
+      <p id="wakeStatus" role="status"></p>
       <p id="playerError" role="status"></p>
     </div>
   </section>
@@ -129,6 +154,12 @@ let lastSavedAt = 0;
 let frame;
 let scrubbing = false;
 let captionsVisible = true;
+let translationVisible = false;
+let displayedPhraseIndex = -1;
+let playbackSpeed = 1;
+let wakeLock;
+let wakePending = false;
+let wakeSession = 0;
 
 function premierePhrases(data) {
   const results = [];
@@ -267,7 +298,7 @@ function updateCaptions() {
 }
 
 function updateTimeline() {
-  updateCaptions();
+  showReview();
   if (scrubbing) return;
   timeline.value = video.currentTime;
   timeline.setAttribute("aria-valuetext", formatTime(video.currentTime));
@@ -275,21 +306,80 @@ function updateTimeline() {
   $("repeat").disabled = phraseAt(phrases, video.currentTime) < 0;
 }
 
+function selectedPhraseIndex() {
+  return reviewIndex >= 0 ? reviewIndex : phraseAt(phrases, video.currentTime);
+}
+
 function showReview() {
   updateCaptions();
-  $("review").hidden = reviewIndex < 0;
-  if (reviewIndex < 0) return;
-  const phrase = phrases[reviewIndex];
-  $("phraseInfo").textContent = `Фраза ${reviewIndex + 1} из ${phrases.length} · ${formatTime(phrase.start)}`;
-  $("previous").disabled = reviewIndex === 0;
-  $("next").disabled = reviewIndex === phrases.length - 1;
-  $("ru").setAttribute("aria-pressed", "false");
-  $("translation").hidden = true;
-  $("translation").textContent = "";
+  const index = selectedPhraseIndex();
+  if (index !== displayedPhraseIndex) translationVisible = false;
+  displayedPhraseIndex = index;
+  const phrase = phrases[index];
+  const ready = !!phrase && !timeline.disabled;
+  $("phraseInfo").textContent = phrase
+    ? `Фраза ${index + 1} из ${phrases.length} · ${formatTime(phrase.start)}`
+    : "До первой реплики";
+  $("previous").disabled = !ready || index === 0;
+  $("next").disabled = timeline.disabled || !phrases[index + 1];
+  $("again").disabled = !ready;
+  $("ru").disabled = !ready;
+  $("continue").disabled = timeline.disabled;
+  $("ru").setAttribute("aria-pressed", String(translationVisible));
+  $("translation").hidden = !translationVisible || !ready;
+  $("translation").textContent = phrase?.ru || "Для этой реплики перевод не добавлен.";
+}
+
+function changeSpeed(delta) {
+  playbackSpeed = Math.min(2, Math.max(0.25, playbackSpeed + delta));
+  video.playbackRate = playbackSpeed;
+  $("speed").textContent = `${Number(playbackSpeed.toFixed(2))}×`;
+  $("slower").disabled = playbackSpeed === 0.25;
+  $("faster").disabled = playbackSpeed === 2;
+}
+
+async function requestWakeLock() {
+  if (player.hidden || document.visibilityState !== "visible" || wakeLock || wakePending) return;
+  if (!navigator.wakeLock) {
+    $("wakeStatus").textContent = "Браузер не поддерживает удержание экрана включённым.";
+    return;
+  }
+  wakePending = true;
+  const session = wakeSession;
+  try {
+    const lock = await navigator.wakeLock.request("screen");
+    if (player.hidden || document.visibilityState !== "visible" || session !== wakeSession) {
+      await lock.release();
+      return;
+    }
+    wakeLock = lock;
+    $("wakeStatus").textContent = "";
+    lock.addEventListener("release", () => {
+      if (wakeLock !== lock) return;
+      wakeLock = undefined;
+      if (!player.hidden && document.visibilityState === "visible") {
+        $("wakeStatus").textContent = "Удержание экрана отключено системой. Нажми любую кнопку плеера для повторной попытки.";
+      }
+    });
+  } catch {
+    if (!player.hidden && document.visibilityState === "visible") {
+      $("wakeStatus").textContent = "Не удалось удержать экран включённым. Проверь энергосбережение телефона.";
+    }
+  } finally {
+    wakePending = false;
+  }
+}
+
+function releaseWakeLock() {
+  const lock = wakeLock;
+  wakeLock = undefined;
+  if (lock) lock.release().catch(() => {});
 }
 
 function playVideo() {
   $("playerError").textContent = "";
+  requestWakeLock();
+  video.playbackRate = playbackSpeed;
   video.play().catch(error => {
     if (error.name !== "AbortError") $("playerError").textContent = "Не удалось воспроизвести файл. Попробуй MP4 с английской дорожкой.";
   });
@@ -376,6 +466,8 @@ function openMovie(entries) {
   reviewIndex = -1;
   reachedEnd = false;
   scrubbing = false;
+  displayedPhraseIndex = -1;
+  translationVisible = false;
   lastSavedAt = 0;
   positionKey = `shadowing-film:${file.name}:${file.size}:${file.lastModified}`;
   objectUrl = URL.createObjectURL(file);
@@ -386,11 +478,17 @@ function openMovie(entries) {
   timeline.disabled = true;
   $("setup").hidden = true;
   player.hidden = false;
+  document.body.classList.add("watching");
   showReview();
   video.src = objectUrl;
+  video.playbackRate = playbackSpeed;
+  requestWakeLock();
 }
 
 function closeMovie() {
+  wakeSession++;
+  releaseWakeLock();
+  document.body.classList.remove("watching");
   savePosition(true);
   if (document.fullscreenElement === player) document.exitFullscreen().catch(() => {});
   video.pause();
@@ -429,16 +527,22 @@ $("play").addEventListener("click", () => {
   else playVideo();
 });
 $("repeat").addEventListener("click", () => repeatPhrase(phraseAt(phrases, video.currentTime)));
-$("previous").addEventListener("click", () => repeatPhrase(reviewIndex - 1));
-$("again").addEventListener("click", () => repeatPhrase(reviewIndex));
-$("next").addEventListener("click", () => repeatPhrase(reviewIndex + 1));
+$("previous").addEventListener("click", () => repeatPhrase(selectedPhraseIndex() - 1));
+$("again").addEventListener("click", () => repeatPhrase(selectedPhraseIndex()));
+$("next").addEventListener("click", () => repeatPhrase(selectedPhraseIndex() + 1));
 $("continue").addEventListener("click", () => continueMovie(true));
 $("ru").addEventListener("click", () => {
-  const translation = $("translation");
-  translation.hidden = !translation.hidden;
-  $("ru").setAttribute("aria-pressed", String(!translation.hidden));
-  translation.textContent = phrases[reviewIndex].ru || "Для этой реплики перевод не добавлен.";
+  translationVisible = !translationVisible;
+  showReview();
 });
+$("slower").addEventListener("click", () => changeSpeed(-0.25));
+$("faster").addEventListener("click", () => changeSpeed(0.25));
+player.addEventListener("click", () => requestWakeLock());
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") requestWakeLock();
+  else savePosition(true);
+});
+
 
 if (document.fullscreenEnabled && player.requestFullscreen) {
   $("fullscreen").hidden = false;
@@ -466,6 +570,7 @@ timeline.addEventListener("change", () => {
 });
 
 video.addEventListener("loadedmetadata", () => {
+  video.playbackRate = playbackSpeed;
   if (!Number.isFinite(video.duration) || video.duration <= 0) {
     $("playerError").textContent = "Не удалось определить длительность фильма.";
     return;
@@ -512,7 +617,11 @@ video.addEventListener("ended", () => {
   if (reviewIndex >= 0) reachedEnd = true;
   savePosition(true);
 });
-window.addEventListener("pagehide", () => savePosition(true));
+window.addEventListener("pagehide", () => {
+  savePosition(true);
+  releaseWakeLock();
+});
+window.addEventListener("pageshow", () => requestWakeLock());
 refreshFileButtons();
 </script>
 </body>
